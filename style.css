@@ -1,36 +1,56 @@
 /*
-    MODERN & CLEAN HYBRID DESIGN
-    This design blends the clarity of the dark theme with modern aesthetics.
+    MODERN & CLEAN HYBRID DESIGN V2
+    Includes Theming, Sliders, and UI/UX Enhancements
 */
 
 /* --- Google Font Import --- */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-/* --- Root Variables for Easy Customization --- */
-:root {
-    --bg-color: #1a202c; /* Very dark blue */
-    --card-color: #2d3748; /* Slightly lighter card background */
-    --interactive-color: #4a5568; /* For inputs and table headers */
-    --primary-accent: #4fd1c5; /* Teal */
-    --secondary-accent: #63b3ed; /* Soft Blue */
-    --text-primary: #e2e8f0; /* Light gray for body text */
-    --text-secondary: #a0aec0; /* Medium gray for less important text */
-    --text-headings: #ffffff; /* Pure white for titles */
+/* --- Dark Theme Variables (Default) --- */
+[data-theme="dark"] {
+    --bg-color: #1a202c;
+    --card-color: #2d3748;
+    --interactive-color: #4a5568;
+    --primary-accent: #4fd1c5;
+    --secondary-accent: #63b3ed;
+    --text-primary: #e2e8f0;
+    --text-secondary: #a0aec0;
+    --text-headings: #ffffff;
     --border-color: rgba(255, 255, 255, 0.1);
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --slider-track-color: #4a5568;
+    --slider-thumb-color: #4fd1c5;
+}
+
+/* --- Light Theme Variables --- */
+[data-theme="light"] {
+    --bg-color: #f7fafc;
+    --card-color: #ffffff;
+    --interactive-color: #e2e8f0;
+    --primary-accent: #319795;
+    --secondary-accent: #3182ce;
+    --text-primary: #4a5568;
+    --text-secondary: #718096;
+    --text-headings: #1a202c;
+    --border-color: #e2e8f0;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --slider-track-color: #e2e8f0;
+    --slider-thumb-color: #319795;
 }
 
 /* --- Base & Body Styles --- */
 body {
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     margin: 0;
     padding: 40px 20px;
-    background: radial-gradient(circle at top, #2d3748, #1a202c);
+    background: radial-gradient(circle at top, var(--card-color), var(--bg-color));
     background-attachment: fixed;
     color: var(--text-primary);
     display: flex;
     justify-content: center;
     align-items: flex-start;
     min-height: 100vh;
+    transition: background-color 0.3s, color 0.3s;
 }
 
 .container {
@@ -39,8 +59,56 @@ body {
     border-radius: 20px;
     max-width: 950px;
     width: 100%;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 20px 40px var(--shadow-color);
     overflow: hidden;
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+/* --- Theme Switch --- */
+.theme-switch-wrapper {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 100;
+}
+.theme-switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 28px;
+}
+.theme-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.slider.round {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--interactive-color);
+    transition: .4s;
+    border-radius: 28px;
+}
+.slider.round:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+input:checked + .slider.round {
+    background-color: var(--primary-accent);
+}
+input:checked + .slider.round:before {
+    transform: translateX(22px);
 }
 
 /* --- Header Section --- */
@@ -48,7 +116,6 @@ body {
     text-align: center;
     padding: 40px 24px 24px;
 }
-
 .main-title {
     font-size: clamp(2.2em, 5vw, 3em);
     font-weight: 800;
@@ -59,22 +126,15 @@ body {
     margin: 0;
     letter-spacing: -1.5px;
 }
-
 .header-section p {
     margin: 8px 0 24px 0;
     color: var(--text-secondary);
 }
-
 .header-section a {
     color: var(--primary-accent);
     text-decoration: none;
     font-weight: 600;
-    transition: color 0.2s;
 }
-.header-section a:hover {
-    color: var(--secondary-accent);
-}
-
 .subtitle {
     font-size: 1.2em;
     font-weight: 700;
@@ -83,7 +143,6 @@ body {
     letter-spacing: 3px;
     margin: 0 0 8px 0;
 }
-
 .race-info {
     color: var(--text-secondary);
     font-size: 1.1em;
@@ -91,72 +150,130 @@ body {
 
 /* --- Input Section --- */
 .input-section {
-    background-color: rgba(0,0,0,0.1); /* Darker inset look */
+    background-color: rgba(0,0,0,0.03);
     margin: 0 24px 32px 24px;
     padding: 32px;
     border-radius: 16px;
     border: 1px solid var(--border-color);
 }
-
+.input-section .input-container {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    flex-wrap: wrap;
+    margin-bottom: 16px; /* Adjusted margin */
+}
+.input-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
 .input-title {
     text-align: center;
     font-size: 1.1em;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 2px;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
     color: var(--text-secondary);
 }
-
 .input-row {
     display: flex;
     justify-content: center;
     gap: 24px;
-    margin-bottom: 24px;
+    margin-bottom: 8px; /* Adjusted margin */
 }
-
 .input-group {
     display: flex;
+    flex-direction: column; /* Changed for sliders */
     align-items: center;
     gap: 12px;
 }
-
 .input-group label {
     font-weight: 500;
     color: var(--text-primary);
 }
-
 .input-section input[type="number"] {
     width: 80px;
     padding: 12px;
+    font-size: 1.1em;
+    text-align: center;
+}
+.input-section select {
+    padding: 12px;
+    font-size: 1.1em;
+    text-align-last: center;
+    padding-right: 2.5rem;
+}
+.input-section input[type="number"], .input-section select {
     border: 2px solid var(--interactive-color);
     border-radius: 10px;
-    font-size: 1.1em;
     font-weight: 700;
     color: var(--text-headings);
     background-color: var(--bg-color);
-    text-align: center;
     transition: all 0.2s ease-in-out;
 }
-
-.input-section input[type="number"]:focus {
+.input-section select {
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23a0aec0' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.7rem center;
+    background-size: 1em;
+}
+.input-section input[type="number"]:focus, .input-section select:focus {
     outline: none;
     border-color: var(--primary-accent);
-    box-shadow: 0 0 0 3px rgba(79, 209, 197, 0.3);
-    transform: scale(1.05);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-accent) 30%, transparent);
 }
 
+/* Slider Styles */
+.slider-input {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 120px;
+    height: 8px;
+    background: var(--slider-track-color);
+    border-radius: 5px;
+    outline: none;
+    transition: opacity .2s;
+}
+.slider-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: var(--slider-thumb-color);
+    border-radius: 50%;
+    cursor: pointer;
+}
+.slider-input::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: var(--slider-thumb-color);
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+/* Inline Error Message */
+.error-message {
+    color: #e53e3e; /* Red for errors */
+    font-weight: 600;
+    height: 20px; /* Reserve space */
+    display: block;
+    text-align: center;
+    margin-top: 8px;
+}
+
+/* Input Summary & Buttons */
 .input-summary {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 24px;
-    margin-bottom: 32px;
+    margin: 16px 0 32px 0;
     font-size: 1.1em;
-    color: var(--text-primary);
-    flex-wrap: wrap;
 }
-
 #avgSpeedBox {
     font-weight: 700;
     font-size: 1.2em;
@@ -165,18 +282,8 @@ body {
     border-radius: 10px;
     border: 1px solid var(--border-color);
 }
-
-#avgSpeedBox #avgSpeed {
-    color: var(--primary-accent);
-}
-
-/* --- Buttons --- */
-.button-row {
-    display: flex;
-    justify-content: center;
-    gap: 16px;
-}
-
+#avgSpeedBox #avgSpeed { color: var(--primary-accent); }
+.button-row { display: flex; justify-content: center; gap: 16px; }
 button {
     padding: 14px 28px;
     border: none;
@@ -187,25 +294,14 @@ button {
     transition: all 0.2s ease;
     text-transform: uppercase;
     letter-spacing: 1px;
-    color: var(--text-headings);
+    color: #fff;
 }
-
 button:hover {
     transform: translateY(-3px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    box-shadow: 0 8px 20px var(--shadow-color);
 }
-
-button:active {
-    transform: translateY(-1px);
-}
-
-button:not(.export-button) {
-    background: linear-gradient(45deg, #3182ce, #2b6cb0); /* Blue gradient */
-}
-
-.export-button {
-    background: linear-gradient(45deg, #38a169, #2f855a); /* Green gradient */
-}
+button:not(.export-button) { background: linear-gradient(45deg, #3182ce, #2b6cb0); }
+.export-button { background: linear-gradient(45deg, #38a169, #2f855a); }
 
 /* --- Table Section --- */
 .table-container {
@@ -213,15 +309,13 @@ button:not(.export-button) {
     padding: 0 24px;
     border-top: 1px solid var(--border-color);
 }
-
 table {
     width: 100%;
     border-collapse: collapse;
     min-width: 700px;
 }
-
-table thead th {
-    background-color: var(--interactive-color);
+thead th {
+    background-color: color-mix(in srgb, var(--interactive-color) 50%, transparent);
     padding: 18px 16px;
     text-align: left;
     font-size: 0.9em;
@@ -230,33 +324,30 @@ table thead th {
     letter-spacing: 1.5px;
     color: var(--text-secondary);
 }
-
-table td {
+thead th:nth-child(5) { color: var(--primary-accent); }
+tbody tr { transition: background-color 0.2s; }
+tbody td {
     padding: 18px 16px;
     border-bottom: 1px solid var(--border-color);
-    font-size: 1em;
     font-weight: 500;
 }
-
-table tbody tr {
-    transition: background-color 0.2s;
-}
-
-table tbody tr:hover {
-    background-color: rgba(255, 255, 255, 0.03);
-}
-
-/* Style the final 'total' row for emphasis */
-table tbody tr:last-child {
+tbody tr:hover { background-color: rgba(255, 255, 255, 0.03); }
+[data-theme="light"] tbody tr:hover { background-color: rgba(0, 0, 0, 0.03); }
+tbody tr:last-child {
     font-weight: 700;
     color: var(--text-headings);
     border-top: 2px solid var(--primary-accent);
 }
+tbody tr:last-child td { color: var(--text-headings); }
 
-table tbody tr:last-child td {
-     color: var(--text-headings);
+/* Visual Feedback Animation */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
-
+#resultsTableBody.recalculating {
+    animation: fadeIn 0.5s ease-out;
+}
 
 /* --- Footer Section --- */
 .footer-section {
@@ -264,33 +355,20 @@ table tbody tr:last-child td {
     padding: 32px 24px;
     color: var(--text-secondary);
     font-size: 0.95em;
-    background-color: rgba(0,0,0,0.1);
+    background-color: color-mix(in srgb, var(--interactive-color) 20%, transparent);
     border-top: 1px solid var(--border-color);
 }
-
 .footer-note {
     color: var(--primary-accent);
     font-weight: 600;
     margin: 8px 0;
 }
-
-.footer-disclaimer {
-    margin-top: 8px;
-    font-style: italic;
-    font-size: 0.9em;
-}
+.footer-disclaimer { margin-top: 8px; font-style: italic; font-size: 0.9em; }
 
 /* --- Responsive Design --- */
 @media (max-width: 768px) {
-    body {
-        padding: 20px 10px;
-    }
-    .input-row, .button-row, .input-summary {
-        flex-direction: column;
-        align-items: center;
-    }
-    button {
-        width: 100%;
-        max-width: 350px;
-    }
+    body { padding: 20px 10px; }
+    .theme-switch-wrapper { top: 10px; right: 10px; }
+    .input-container { flex-direction: column; gap: 20px; }
+    button { width: 100%; max-width: 350px; }
 }

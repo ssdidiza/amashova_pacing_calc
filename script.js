@@ -1,146 +1,201 @@
-// Define the race segments and their base distances
-// Segment data includes: Point on Route, Distance (Dist), Total Distance (TotalDist)
-// The timeFactor is derived from the provided examples and represents the relative difficulty/speed of each segment.
-// A factor > 1 means the segment is relatively slower than the overall average speed.
-// A factor < 1 means the segment is relatively faster than the overall average speed.
-// These factors have been normalized so their sum equals the number of segments (6),
-// ensuring the total time calculation is exact.
+// --- DOM Element Selection ---
+const elements = {
+    targetHrInput: document.getElementById('targetHr'),
+    targetMinInput: document.getElementById('targetMin'),
+    targetHrSlider: document.getElementById('targetHrSlider'),
+    targetMinSlider: document.getElementById('targetMinSlider'),
+    startHrInput: document.getElementById('startHr'),
+    startMinInput: document.getElementById('startMin'),
+    pacingStrategyInput: document.getElementById('pacingStrategy'),
+    resultsTableBody: document.getElementById('resultsTableBody'),
+    avgSpeedSpan: document.getElementById('avgSpeed'),
+    totalTimeSpan: document.getElementById('totalTime'),
+    timeErrorSpan: document.getElementById('timeError'),
+    calculateButton: document.getElementById('calculateButton'),
+    exportButton: document.getElementById('exportButton'),
+    themeToggle: document.getElementById('theme-toggle'),
+    body: document.body
+};
+
+// --- Race Data & Pacing Strategies ---
 const segments = [
-    { name: "WT 1 Thornville Chicken Farm", dist: 24.5, totalDist: 24.5, timeFactor: 1.1577 },
-    { name: "WT 2 Cato Ridge", dist: 17.3, totalDist: 41.8, timeFactor: 1.0815 },
-    { name: "WT 3 Comrades Wall of Fame", dist: 13.5, totalDist: 55.3, timeFactor: 1.0915 },
-    { name: "Gilletts Station", dist: 19.2, totalDist: 74.5, timeFactor: 0.9512 },
-    { name: "Forty-fifth Cutting", dist: 19.2, totalDist: 93.7, timeFactor: 0.7948 },
-    { name: "Finish at Suncoast", dist: 12.3, totalDist: 106.0, timeFactor: 0.8830 }
+    { name: "Water Table 1 Thornville Chicken Farm", dist: 24.5, totalDist: 24.5 },
+    { name: "Water Table 2 Cato Ridge", dist: 17.3, totalDist: 41.8 },
+    { name: "Water Table 3 Comrades Wall of Fame", dist: 13.5, totalDist: 55.3 },
+    { name: "Gilletts Station", dist: 19.2, totalDist: 74.5 },
+    { name: "Forty-fifth Cutting", dist: 19.2, totalDist: 93.7 },
+    { name: "Finish at Suncoast", dist: 12.3, totalDist: 106.0 }
 ];
+const pacingStrategies = {
+    even: [1.1577, 1.0815, 1.0915, 0.9512, 0.7948, 0.8830],
+    conservative: [1.25, 1.10, 1.09, 0.94, 0.78, 0.80],
+    aggressive: [1.05, 1.06, 1.10, 0.96, 0.81, 0.98]
+};
+const totalRaceDistance = 106.0;
 
-const totalRaceDistance = 106.0; // km
+// --- Main Calculation Function ---
+function calculateSplits() {
+    elements.timeErrorSpan.textContent = ''; // Clear previous errors
 
-/**
- * Formats time in hours (decimal) to HH:MM:SS string.
- * @param {number} timeInHours - Time in hours as a decimal.
- * @returns {string} Formatted time string (HH:MM:SS).
- */
+    const targetHr = parseInt(elements.targetHrInput.value) || 0;
+    const targetMin = parseInt(elements.targetMinInput.value) || 0;
+    const targetTimeInHours = targetHr + (targetMin / 60);
+
+    // Inline Error Handling
+    if (targetTimeInHours <= 0) {
+        elements.timeErrorSpan.textContent = 'Target time must be greater than zero.';
+        elements.resultsTableBody.innerHTML = ''; // Clear table
+        return;
+    }
+
+    // Visual Feedback for Recalculation
+    elements.resultsTableBody.classList.remove('recalculating');
+    void elements.resultsTableBody.offsetWidth; // Trigger reflow to restart animation
+    elements.resultsTableBody.classList.add('recalculating');
+
+    const startHr = parseInt(elements.startHrInput.value) || 0;
+    const startMin = parseInt(elements.startMinInput.value) || 0;
+    const selectedPacing = elements.pacingStrategyInput.value;
+
+    const startTime = new Date();
+    startTime.setHours(startHr, startMin, 0, 0);
+
+    const overallAvgSpeed = totalRaceDistance / targetTimeInHours;
+    elements.avgSpeedSpan.textContent = overallAvgSpeed.toFixed(2);
+
+    elements.resultsTableBody.innerHTML = '';
+
+    const timeFactors = pacingStrategies[selectedPacing];
+    const proportionalContributions = segments.map((segment, index) => segment.dist * timeFactors[index]);
+    const sumProportionalContributions = proportionalContributions.reduce((sum, val) => sum + val, 0);
+
+    let cumulativeTimeInHours = 0;
+    const calculatedResults = [];
+
+    for (let i = 0; i < segments.length; i++) {
+        const segment = segments[i];
+        const actualSplitTimeInHours = (proportionalContributions[i] / sumProportionalContributions) * targetTimeInHours;
+        const speedOnSplit = segment.dist / actualSplitTimeInHours;
+        cumulativeTimeInHours += actualSplitTimeInHours;
+        const movingAvgSpeed = segment.totalDist / cumulativeTimeInHours;
+        const cumulativeSeconds = cumulativeTimeInHours * 3600;
+        const arrivalTime = new Date(startTime.getTime() + cumulativeSeconds * 1000);
+
+        const resultData = {
+            name: segment.name,
+            dist: segment.dist.toFixed(1),
+            totalDist: segment.totalDist.toFixed(1),
+            timeToPoint: formatTime(cumulativeTimeInHours),
+            timeOfDay: formatTimeOfDay(arrivalTime),
+            splitTime: formatTime(actualSplitTimeInHours),
+            speedOnSplit: speedOnSplit.toFixed(2),
+            movingAvgSpeed: movingAvgSpeed.toFixed(2)
+        };
+        calculatedResults.push(resultData);
+
+        const row = elements.resultsTableBody.insertRow();
+        row.insertCell().textContent = resultData.name;
+        row.insertCell().textContent = resultData.dist;
+        row.insertCell().textContent = resultData.totalDist;
+        row.insertCell().textContent = resultData.timeToPoint;
+        row.insertCell().textContent = resultData.timeOfDay;
+        row.insertCell().textContent = resultData.splitTime;
+        row.insertCell().textContent = resultData.speedOnSplit;
+        row.insertCell().textContent = resultData.movingAvgSpeed;
+    }
+
+    window.lastCalculatedResults = calculatedResults;
+}
+
+// --- Helper & UI Functions ---
 function formatTime(timeInHours) {
     const totalSeconds = Math.round(timeInHours * 3600);
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
-
-    const pad = (num) => num.toString().padStart(2, '0');
-    return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
-/**
- * Calculates and displays the split times and speeds based on target finish time.
- */
-function calculateSplits() {
-    const targetHrInput = document.getElementById('targetHr');
-    const targetMinInput = document.getElementById('targetMin');
-    const resultsTableBody = document.getElementById('resultsTableBody');
-    const avgSpeedSpan = document.getElementById('avgSpeed');
-
-    const targetHr = parseInt(targetHrInput.value);
-    const targetMin = parseInt(targetMinInput.value);
-
-    // Input validation
-    if (isNaN(targetHr) || isNaN(targetMin) || targetHr < 0 || targetMin < 0 || targetMin > 59) {
-        alert("Please enter valid positive numbers for hours and minutes (minutes must be 0-59).");
-        return;
-    }
-
-    const targetTimeInHours = targetHr + (targetMin / 60);
-
-    if (targetTimeInHours <= 0) {
-        alert("Target time must be greater than zero.");
-        return;
-    }
-
-    // Calculate overall average speed
-    const overallAvgSpeed = totalRaceDistance / targetTimeInHours;
-    avgSpeedSpan.textContent = overallAvgSpeed.toFixed(2);
-
-    let cumulativeTimeInHours = 0;
-    resultsTableBody.innerHTML = ''; // Clear previous results
-
-    // Step 1: Calculate the "proportional time contribution" for each segment
-    // This value represents the segment's effective distance when its difficulty factor is applied.
-    // The sum of these proportional contributions will be used to correctly distribute the target time.
-    const proportionalContributions = segments.map(segment => segment.dist * segment.timeFactor);
-    const sumProportionalContributions = proportionalContributions.reduce((sum, val) => sum + val, 0);
-
-    // Step 2: Calculate actual split times based on the target time and proportional contributions
-    const calculatedResults = [];
-    for (let i = 0; i < segments.length; i++) {
-        const segment = segments[i];
-        
-        // Calculate the actual split time for this segment
-        // The target time is distributed proportionally based on the segment's
-        // weighted distance (dist * timeFactor) relative to the total weighted distance.
-        const actualSplitTimeInHours = (proportionalContributions[i] / sumProportionalContributions) * targetTimeInHours;
-
-        const speedOnSplit = segment.dist / actualSplitTimeInHours;
-        cumulativeTimeInHours += actualSplitTimeInHours;
-        const movingAvgSpeed = segment.totalDist / cumulativeTimeInHours;
-
-        calculatedResults.push({
-            name: segment.name,
-            dist: segment.dist,
-            totalDist: segment.totalDist,
-            timeToPoint: formatTime(cumulativeTimeInHours),
-            splitTime: formatTime(actualSplitTimeInHours),
-            speedOnSplit: speedOnSplit.toFixed(2),
-            movingAvgSpeed: movingAvgSpeed.toFixed(2),
-            rawSplitTimeHours: actualSplitTimeInHours // Store for CSV export
-        });
-
-        const row = resultsTableBody.insertRow();
-        row.insertCell().textContent = segment.name;
-        row.insertCell().textContent = segment.dist.toFixed(1);
-        row.insertCell().textContent = segment.totalDist.toFixed(1);
-        row.insertCell().textContent = formatTime(cumulativeTimeInHours);
-        row.insertCell().textContent = formatTime(actualSplitTimeInHours);
-        row.insertCell().textContent = speedOnSplit.toFixed(2);
-        row.insertCell().textContent = movingAvgSpeed.toFixed(2);
-    }
-
-    // Store calculated results globally for CSV export
-    window.lastCalculatedResults = calculatedResults;
+function formatTimeOfDay(date) {
+    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
 }
 
-/**
- * Exports the current calculation results to a CSV file.
- */
+function updateSummary() {
+    const hr = parseInt(elements.targetHrInput.value) || 0;
+    const min = parseInt(elements.targetMinInput.value) || 0;
+    elements.totalTimeSpan.textContent = `Total Time: ${hr}:${String(min).padStart(2, '0')}:00`;
+}
+
+function syncInputs(source, target) {
+    target.value = source.value;
+}
+
+// --- Theming ---
+function setInitialTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    elements.body.setAttribute('data-theme', savedTheme);
+    elements.themeToggle.checked = savedTheme === 'light';
+}
+
+function toggleTheme() {
+    const newTheme = elements.themeToggle.checked ? 'light' : 'dark';
+    elements.body.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+}
+
+// --- CSV Export ---
 function exportToCSV() {
     if (!window.lastCalculatedResults || window.lastCalculatedResults.length === 0) {
-        alert("Please calculate the split times first.");
+        elements.timeErrorSpan.textContent = "Please calculate splits first.";
         return;
     }
-
-    let csvContent = "Point on Route,Dist (km),Total Dist (km),Time to Point,Split Time,Speed on Split (km/h),Moving Average Speed (km/h)\n";
-
+    let csvContent = "Point on Route,Dist (km),Total Dist (km),Time to Point,Time of Day,Split Time,Speed on Split (km/h),Moving Average Speed (km/h)\n";
     window.lastCalculatedResults.forEach(row => {
-        csvContent += `${row.name},${row.dist},${row.totalDist},${row.timeToPoint},${row.splitTime},${row.speedOnSplit},${row.movingAvgSpeed}\n`;
+        csvContent += `"${row.name}",${row.dist},${row.totalDist},${row.timeToPoint},${row.timeOfDay},${row.splitTime},${row.speedOnSplit},${row.movingAvgSpeed}\n`;
     });
-
-    const targetHr = document.getElementById('targetHr').value;
-    const targetMin = document.getElementById('targetMin').value;
-    const filename = `Amashova_Splits_${targetHr}h${targetMin}m.csv`;
-
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
-    if (link.download !== undefined) { // Feature detection for HTML5 download attribute
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", filename);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    } else { // Fallback for older browsers
-        alert("Your browser does not support the download attribute. Please copy the data manually.");
-    }
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Amashova_Splits_${elements.targetHrInput.value}h${elements.targetMinInput.value}m.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
-// Initial calculation on page load with default values
-document.addEventListener('DOMContentLoaded', calculateSplits);
+// --- Event Listeners Setup ---
+function addEventListeners() {
+    // Inputs that trigger recalculation
+    const liveInputs = [
+        elements.targetHrInput, elements.targetMinInput,
+        elements.targetHrSlider, elements.targetMinSlider,
+        elements.startHrInput, elements.startMinInput,
+        elements.pacingStrategyInput
+    ];
+    liveInputs.forEach(input => input.addEventListener('input', () => {
+        updateSummary();
+        calculateSplits();
+    }));
+
+    // Sync sliders and number inputs
+    elements.targetHrInput.addEventListener('input', () => syncInputs(elements.targetHrInput, elements.targetHrSlider));
+    elements.targetHrSlider.addEventListener('input', () => syncInputs(elements.targetHrSlider, elements.targetHrInput));
+    elements.targetMinInput.addEventListener('input', () => syncInputs(elements.targetMinInput, elements.targetMinSlider));
+    elements.targetMinSlider.addEventListener('input', () => syncInputs(elements.targetMinSlider, elements.targetMinInput));
+
+    // Button clicks
+    elements.calculateButton.addEventListener('click', calculateSplits);
+    elements.exportButton.addEventListener('click', exportToCSV);
+
+    // Theming
+    elements.themeToggle.addEventListener('change', toggleTheme);
+}
+
+// --- Initialization ---
+document.addEventListener('DOMContentLoaded', () => {
+    setInitialTheme();
+    addEventListeners();
+    updateSummary();
+    calculateSplits(); // Initial calculation on page load
+});
