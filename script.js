@@ -11,20 +11,22 @@ const elements = {
     avgSpeedSpan: document.getElementById('avgSpeed'),
     totalTimeSpan: document.getElementById('totalTime'),
     timeErrorSpan: document.getElementById('timeError'),
-    calculateButton: document.getElementById('calculateButton'),
     exportButton: document.getElementById('exportButton'),
     themeToggle: document.getElementById('theme-toggle'),
-    body: document.body
+    body: document.body,
+    chartContainer: document.querySelector('.chart-container'),
+    chartCanvas: document.getElementById('paceChart'),
 };
 
-// --- Race Data & Pacing Strategies ---
+// --- Global State & Data ---
+let paceChart = null; // To hold the chart instance
 const segments = [
-    { name: "Water Table 1 Thornville Chicken Farm", dist: 24.5, totalDist: 24.5 },
-    { name: "Water Table 2 Cato Ridge", dist: 17.3, totalDist: 41.8 },
-    { name: "Water Table 3 Comrades Wall of Fame", dist: 13.5, totalDist: 55.3 },
+    { name: "WT1 Thornville", dist: 24.5, totalDist: 24.5 }, // Shortened names for chart
+    { name: "WT2 Cato Ridge", dist: 17.3, totalDist: 41.8 },
+    { name: "WT3 Wall of Fame", dist: 13.5, totalDist: 55.3 },
     { name: "Gilletts Station", dist: 19.2, totalDist: 74.5 },
-    { name: "Forty-fifth Cutting", dist: 19.2, totalDist: 93.7 },
-    { name: "Finish at Suncoast", dist: 12.3, totalDist: 106.0 }
+    { name: "45th Cutting", dist: 19.2, totalDist: 93.7 },
+    { name: "Finish Suncoast", dist: 12.3, totalDist: 106.0 }
 ];
 const pacingStrategies = {
     even: [1.1577, 1.0815, 1.0915, 0.9512, 0.7948, 0.8830],
@@ -35,34 +37,32 @@ const totalRaceDistance = 106.0;
 
 // --- Main Calculation Function ---
 function calculateSplits() {
-    elements.timeErrorSpan.textContent = ''; // Clear previous errors
+    elements.timeErrorSpan.textContent = '';
 
     const targetHr = parseInt(elements.targetHrInput.value) || 0;
     const targetMin = parseInt(elements.targetMinInput.value) || 0;
     const targetTimeInHours = targetHr + (targetMin / 60);
 
-    // Inline Error Handling
     if (targetTimeInHours <= 0) {
         elements.timeErrorSpan.textContent = 'Target time must be greater than zero.';
-        elements.resultsTableBody.innerHTML = ''; // Clear table
+        elements.resultsTableBody.innerHTML = '';
+        if (paceChart) paceChart.destroy();
         return;
     }
 
-    // Visual Feedback for Recalculation
     elements.resultsTableBody.classList.remove('recalculating');
-    void elements.resultsTableBody.offsetWidth; // Trigger reflow to restart animation
+    elements.chartContainer.classList.remove('recalculating');
+    void elements.resultsTableBody.offsetWidth;
     elements.resultsTableBody.classList.add('recalculating');
+    elements.chartContainer.classList.add('recalculating');
 
     const startHr = parseInt(elements.startHrInput.value) || 0;
     const startMin = parseInt(elements.startMinInput.value) || 0;
     const selectedPacing = elements.pacingStrategyInput.value;
-
     const startTime = new Date();
     startTime.setHours(startHr, startMin, 0, 0);
 
-    const overallAvgSpeed = totalRaceDistance / targetTimeInHours;
-    elements.avgSpeedSpan.textContent = overallAvgSpeed.toFixed(2);
-
+    elements.avgSpeedSpan.textContent = (totalRaceDistance / targetTimeInHours).toFixed(2);
     elements.resultsTableBody.innerHTML = '';
 
     const timeFactors = pacingStrategies[selectedPacing];
@@ -72,14 +72,12 @@ function calculateSplits() {
     let cumulativeTimeInHours = 0;
     const calculatedResults = [];
 
-    for (let i = 0; i < segments.length; i++) {
-        const segment = segments[i];
+    for (const [i, segment] of segments.entries()) {
         const actualSplitTimeInHours = (proportionalContributions[i] / sumProportionalContributions) * targetTimeInHours;
         const speedOnSplit = segment.dist / actualSplitTimeInHours;
         cumulativeTimeInHours += actualSplitTimeInHours;
         const movingAvgSpeed = segment.totalDist / cumulativeTimeInHours;
-        const cumulativeSeconds = cumulativeTimeInHours * 3600;
-        const arrivalTime = new Date(startTime.getTime() + cumulativeSeconds * 1000);
+        const arrivalTime = new Date(startTime.getTime() + (cumulativeTimeInHours * 3600 * 1000));
 
         const resultData = {
             name: segment.name,
@@ -88,7 +86,7 @@ function calculateSplits() {
             timeToPoint: formatTime(cumulativeTimeInHours),
             timeOfDay: formatTimeOfDay(arrivalTime),
             splitTime: formatTime(actualSplitTimeInHours),
-            speedOnSplit: speedOnSplit.toFixed(2),
+            speedOnSplit: parseFloat(speedOnSplit.toFixed(2)),
             movingAvgSpeed: movingAvgSpeed.toFixed(2)
         };
         calculatedResults.push(resultData);
@@ -100,55 +98,85 @@ function calculateSplits() {
         row.insertCell().textContent = resultData.timeToPoint;
         row.insertCell().textContent = resultData.timeOfDay;
         row.insertCell().textContent = resultData.splitTime;
-        row.insertCell().textContent = resultData.speedOnSplit;
+        row.insertCell().textContent = String(resultData.speedOnSplit);
         row.insertCell().textContent = resultData.movingAvgSpeed;
     }
 
     window.lastCalculatedResults = calculatedResults;
+    renderChart(calculatedResults);
+}
+
+// --- Charting Function ---
+function renderChart(data) {
+    if (paceChart) {
+        paceChart.destroy();
+    }
+    const theme = document.body.getAttribute('data-theme') || 'dark';
+    const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--chart-grid-color');
+    const fontColor = getComputedStyle(document.documentElement).getPropertyValue('--chart-font-color');
+
+    paceChart = new Chart(elements.chartCanvas, {
+        type: 'bar',
+        data: {
+            labels: data.map(row => row.name),
+            datasets: [{
+                label: 'Speed on Split (km/h)',
+                data: data.map(row => row.speedOnSplit),
+                backgroundColor: theme === 'dark' ? 'rgba(79, 209, 197, 0.6)' : 'rgba(49, 151, 149, 0.7)',
+                borderColor: theme === 'dark' ? 'rgba(79, 209, 197, 1)' : 'rgba(49, 151, 149, 1)',
+                borderWidth: 2,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: false },
+                title: { display: true, text: 'Pacing Speed Per Segment', color: fontColor, font: { size: 16 } }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    title: { display: true, text: 'Speed (km/h)', color: fontColor },
+                    grid: { color: gridColor },
+                    ticks: { color: fontColor }
+                },
+                x: {
+                    grid: { color: 'transparent' },
+                    ticks: { color: fontColor }
+                }
+            }
+        }
+    });
 }
 
 // --- Helper & UI Functions ---
-function formatTime(timeInHours) {
-    const totalSeconds = Math.round(timeInHours * 3600);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-}
-
-function formatTimeOfDay(date) {
-    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
-}
-
+function formatTime(time) { return new Date(time * 3600 * 1000).toISOString().slice(11, 19); }
+function formatTimeOfDay(date) { return date.toTimeString().slice(0, 8); }
 function updateSummary() {
     const hr = parseInt(elements.targetHrInput.value) || 0;
     const min = parseInt(elements.targetMinInput.value) || 0;
     elements.totalTimeSpan.textContent = `Total Time: ${hr}:${String(min).padStart(2, '0')}:00`;
 }
-
-function syncInputs(source, target) {
-    target.value = source.value;
-}
-
-// --- Theming ---
+function syncInputs(source, target) { target.value = source.value; }
 function setInitialTheme() {
     const savedTheme = localStorage.getItem('theme') || 'dark';
     elements.body.setAttribute('data-theme', savedTheme);
     elements.themeToggle.checked = savedTheme === 'light';
 }
-
 function toggleTheme() {
     const newTheme = elements.themeToggle.checked ? 'light' : 'dark';
     elements.body.setAttribute('data-theme', newTheme);
     localStorage.setItem('theme', newTheme);
+    if (window.lastCalculatedResults) {
+        renderChart(window.lastCalculatedResults);
+    }
 }
 
 // --- CSV Export ---
 function exportToCSV() {
-    if (!window.lastCalculatedResults || window.lastCalculatedResults.length === 0) {
-        elements.timeErrorSpan.textContent = "Please calculate splits first.";
-        return;
-    }
+    if (!window.lastCalculatedResults) { return; }
     let csvContent = "Point on Route,Dist (km),Total Dist (km),Time to Point,Time of Day,Split Time,Speed on Split (km/h),Moving Average Speed (km/h)\n";
     window.lastCalculatedResults.forEach(row => {
         csvContent += `"${row.name}",${row.dist},${row.totalDist},${row.timeToPoint},${row.timeOfDay},${row.splitTime},${row.speedOnSplit},${row.movingAvgSpeed}\n`;
@@ -158,7 +186,6 @@ function exportToCSV() {
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
     link.setAttribute("download", `Amashova_Splits_${elements.targetHrInput.value}h${elements.targetMinInput.value}m.csv`);
-    link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -166,29 +193,15 @@ function exportToCSV() {
 
 // --- Event Listeners Setup ---
 function addEventListeners() {
-    // Inputs that trigger recalculation
-    const liveInputs = [
-        elements.targetHrInput, elements.targetMinInput,
-        elements.targetHrSlider, elements.targetMinSlider,
-        elements.startHrInput, elements.startMinInput,
-        elements.pacingStrategyInput
-    ];
-    liveInputs.forEach(input => input.addEventListener('input', () => {
-        updateSummary();
-        calculateSplits();
-    }));
+    const liveInputs = [elements.targetHrInput, elements.targetMinInput, elements.targetHrSlider, elements.targetMinSlider, elements.startHrInput, elements.startMinInput, elements.pacingStrategyInput];
+    liveInputs.forEach(input => input.addEventListener('input', () => { updateSummary(); calculateSplits(); }));
 
-    // Sync sliders and number inputs
     elements.targetHrInput.addEventListener('input', () => syncInputs(elements.targetHrInput, elements.targetHrSlider));
     elements.targetHrSlider.addEventListener('input', () => syncInputs(elements.targetHrSlider, elements.targetHrInput));
     elements.targetMinInput.addEventListener('input', () => syncInputs(elements.targetMinInput, elements.targetMinSlider));
     elements.targetMinSlider.addEventListener('input', () => syncInputs(elements.targetMinSlider, elements.targetMinInput));
 
-    // Button clicks
-    elements.calculateButton.addEventListener('click', calculateSplits);
     elements.exportButton.addEventListener('click', exportToCSV);
-
-    // Theming
     elements.themeToggle.addEventListener('change', toggleTheme);
 }
 
@@ -197,5 +210,5 @@ document.addEventListener('DOMContentLoaded', () => {
     setInitialTheme();
     addEventListeners();
     updateSummary();
-    calculateSplits(); // Initial calculation on page load
+    calculateSplits();
 });

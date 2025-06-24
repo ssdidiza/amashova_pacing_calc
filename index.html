@@ -8,10 +8,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<!-- The `data-theme` attribute will be controlled by JavaScript -->
 <body data-theme="dark">
-    <!-- Theme Toggler -->
     <div class="theme-switch-wrapper">
         <label class="theme-switch" for="theme-toggle">
             <input type="checkbox" id="theme-toggle" />
@@ -43,7 +42,6 @@
                             <input type="range" id="targetMinSlider" min="0" max="59" value="0" class="slider-input">
                         </div>
                     </div>
-                    <!-- Inline Error Message Span -->
                     <span id="timeError" class="error-message"></span>
                 </div>
                 <div class="input-block">
@@ -79,8 +77,6 @@
                 <span id="avgSpeedBox">Average Speed: <span id="avgSpeed">0.00</span> km/h</span>
             </div>
             <div class="button-row">
-                <!-- Button is kept for accessibility but live-calc is primary -->
-                <button id="calculateButton">Calculate Split Times</button>
                 <button id="exportButton" class="export-button">Export to CSV</button>
             </div>
         </div>
@@ -100,11 +96,13 @@
                             <th>Moving Average Speed (km/h)</th>
                         </tr>
                     </thead>
-                    <tbody id="resultsTableBody">
-                        <!-- Results will be inserted here by JavaScript -->
-                    </tbody>
+                    <tbody id="resultsTableBody"></tbody>
                 </table>
             </div>
+        </div>
+        
+        <div class="chart-container">
+            <canvas id="paceChart"></canvas>
         </div>
 
         <div class="footer-section">
@@ -115,6 +113,5 @@
     </div>
 
     <script src="script.js"></script>
-    <!-- The inline script is no longer needed, all logic is moved to script.js -->
 </body>
 </html>
