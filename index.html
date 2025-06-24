@@ -5,30 +5,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Amashova Split Time Predictor</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <h1>Amashova Durban Classic <br>Split Time Predictor</h1>
-
-        <div class="input-section">
-            <p>Enter your Target Finish Time:</p>
-            <div class="input-group">
-                <label for="targetHr">Hr:</label>
-                <input type="number" id="targetHr" min="0" value="4">
+    <div class="container gradient-bg">
+        <div class="header-section">
+            <h1 class="main-title">Amashova Durban Classic</h1>
+            <h2 class="subtitle">Split Time Calculator</h2>
+            <div class="race-info"><span>106km Cycling Race</span></div>
+            <div class="whatsapp-box">
+                <p>Join the Amashova community!</p>
+                <a href="https://chat.whatsapp.com/EUCChxKCvF2BfEMDp7q5p5" target="_blank" class="whatsapp-link">Join WhatsApp Group</a>
             </div>
-            <div class="input-group">
-                <label for="targetMin">Min:</label>
-                <input type="number" id="targetMin" min="0" max="59" value="0">
-            </div>
-            <button onclick="calculateSplits()">Calculate Split Times</button>
-            <button onclick="exportToCSV()" class="export-button">Export to CSV</button>
         </div>
-
-        <div id="output-section">
-            <div class="summary-box">
-                <p>Overall Average Speed: <span id="avgSpeed">0.00</span> km/h</p>
+        <div class="input-section gradient-card">
+            <div class="input-title">Target Time</div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label for="targetHr">Hours:</label>
+                    <input type="number" id="targetHr" min="1" max="12" value="4">
+                </div>
+                <div class="input-group">
+                    <label for="targetMin">Minutes:</label>
+                    <input type="number" id="targetMin" min="0" max="59" value="0">
+                </div>
             </div>
-
+            <div class="input-summary">
+                <span id="totalTime">Total Time: 4:00:00</span>
+                <span id="avgSpeedBox">Average Speed: <span id="avgSpeed">0.00</span> km/h</span>
+            </div>
+            <div class="button-row">
+                <button onclick="calculateSplits()">Calculate Split Times</button>
+                <button onclick="exportToCSV()" class="export-button">Export to CSV</button>
+            </div>
+        </div>
+        <div id="output-section">
             <div class="table-container">
                 <table>
                     <thead>
@@ -48,13 +61,24 @@
                 </table>
             </div>
         </div>
+        <div class="footer-section">
+            <p>Created by <a href="https://www.strava.com/athletes/26187606" target="_blank">Spera Didiza</a></p>
+            <p>Split Time Calculator - Amashova Durban Classic Cycling Race</p>
+            <p class="footer-note">Adjust your target time above to see predicted splits and pacing strategy</p>
+            <p class="footer-disclaimer">* Times calculated based on terrain difficulty and section characteristics</p>
+        </div>
     </div>
-
-    <footer>
-        <p>Created by Spera Didiza – <a href="https://www.strava.com/athletes/26187606" target="_blank">https://www.strava.com/athletes/26187606</a></p>
-        <p>Join the Amashova riders on WhatsApp: <a href="https://chat.whatsapp.com/EUCChxKCvF2BfEMDp7q5p5" target="_blank">https://chat.whatsapp.com/EUCChxKCvF2BfEMDp7q5p5</a></p>
-    </footer>
-
     <script src="script.js"></script>
+    <script>
+        // Update summary info on input change
+        document.getElementById('targetHr').addEventListener('input', updateSummary);
+        document.getElementById('targetMin').addEventListener('input', updateSummary);
+        function updateSummary() {
+            const hr = parseInt(document.getElementById('targetHr').value) || 0;
+            const min = parseInt(document.getElementById('targetMin').value) || 0;
+            document.getElementById('totalTime').textContent = `Total Time: ${hr}:${min.toString().padStart(2, '0')}:00`;
+        }
+        updateSummary();
+    </script>
 </body>
 </html>
