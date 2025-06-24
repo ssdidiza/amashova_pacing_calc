@@ -18,9 +18,9 @@ const AmashovaSplitCalculator = () => {
 
   // Race route data based on the provided reference
   const routePoints = [
-    { name: "Water Table 1 Thornville Chicken Farm", distance: 24.5, totalDistance: 24.5 },
-    { name: "Water Table 2 Cato Ridge", distance: 17.3, totalDistance: 41.8 },
-    { name: "Water Table 3 Comrades Wall of Fame", distance: 13.5, totalDistance: 55.3 },
+    { name: "WT 1 Thornville Chicken Farm", distance: 24.5, totalDistance: 24.5 },
+    { name: "WT 2 Cato Ridge", distance: 17.3, totalDistance: 41.8 },
+    { name: "WT 3 Comrades Wall of Fame", distance: 13.5, totalDistance: 55.3 },
     { name: "Gilletts Station", distance: 19.2, totalDistance: 74.5 },
     { name: "Forty-fifth Cutting", distance: 19.2, totalDistance: 93.7 },
     { name: "Finish at Suncoast", distance: 12.3, totalDistance: 106.0 }

@@ -6,9 +6,9 @@
 // These factors have been normalized so their sum equals the number of segments (6),
 // ensuring the total time calculation is exact.
 const segments = [
-    { name: "Water Table 1 Thornville Chicken Farm", dist: 24.5, totalDist: 24.5, timeFactor: 1.1577 },
-    { name: "Water Table 2 Cato Ridge", dist: 17.3, totalDist: 41.8, timeFactor: 1.0815 },
-    { name: "Water Table 3 Comrades Wall of Fame", dist: 13.5, totalDist: 55.3, timeFactor: 1.0915 },
+    { name: "WT 1 Thornville Chicken Farm", dist: 24.5, totalDist: 24.5, timeFactor: 1.1577 },
+    { name: "WT 2 Cato Ridge", dist: 17.3, totalDist: 41.8, timeFactor: 1.0815 },
+    { name: "WT 3 Comrades Wall of Fame", dist: 13.5, totalDist: 55.3, timeFactor: 1.0915 },
     { name: "Gilletts Station", dist: 19.2, totalDist: 74.5, timeFactor: 0.9512 },
     { name: "Forty-fifth Cutting", dist: 19.2, totalDist: 93.7, timeFactor: 0.7948 },
     { name: "Finish at Suncoast", dist: 12.3, totalDist: 106.0, timeFactor: 0.8830 }
