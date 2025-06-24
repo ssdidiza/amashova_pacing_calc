@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amashova Split Time Predictor</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Amashova Durban Classic <br>Split Time Predictor</h1>
+
+        <div class="input-section">
+            <p>Enter your Target Finish Time:</p>
+            <div class="input-group">
+                <label for="targetHr">Hr:</label>
+                <input type="number" id="targetHr" min="0" value="4">
+            </div>
+            <div class="input-group">
+                <label for="targetMin">Min:</label>
+                <input type="number" id="targetMin" min="0" max="59" value="0">
+            </div>
+            <button onclick="calculateSplits()">Calculate Split Times</button>
+            <button onclick="exportToCSV()" class="export-button">Export to CSV</button>
+        </div>
+
+        <div id="output-section">
+            <div class="summary-box">
+                <p>Overall Average Speed: <span id="avgSpeed">0.00</span> km/h</p>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Point on Route</th>
+                            <th>Dist (km)</th>
+                            <th>Total Dist (km)</th>
+                            <th>Time to Point</th>
+                            <th>Split Time</th>
+                            <th>Speed on Split (km/h)</th>
+                            <th>Moving Average Speed (km/h)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTableBody">
+                        <!-- Results will be inserted here by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Created by Spera Didiza – <a href="https://www.strava.com/athletes/26187606" target="_blank">https://www.strava.com/athletes/26187606</a></p>
+        <p>Join the Amashova riders on WhatsApp: <a href="https://chat.whatsapp.com/EUCChxKCvF2BfEMDp7q5p5" target="_blank">https://chat.whatsapp.com/EUCChxKCvF2BfEMDp7q5p5</a></p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
