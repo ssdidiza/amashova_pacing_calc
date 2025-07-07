@@ -63,8 +63,16 @@ function calculateSplits() {
     startTime.setHours(startHr, startMin, 0, 0);
 
     elements.avgSpeedSpan.textContent = (totalRaceDistance / targetTimeInHours).toFixed(2);
-    elements.resultsTableBody.innerHTML = '';
 
+    const calculatedResults = generateSplitData(targetTimeInHours, selectedPacing, startTime);
+    populateTableWithResults(calculatedResults);
+
+    window.lastCalculatedResults = calculatedResults;
+    renderChart(calculatedResults);
+}
+
+// --- Calculation Helper Functions ---
+function generateSplitData(targetTimeInHours, selectedPacing, startTime) {
     const timeFactors = pacingStrategies[selectedPacing];
     const proportionalContributions = segments.map((segment, index) => segment.dist * timeFactors[index]);
     const sumProportionalContributions = proportionalContributions.reduce((sum, val) => sum + val, 0);
@@ -72,17 +80,18 @@ function calculateSplits() {
     let cumulativeTimeInHours = 0;
     const calculatedResults = [];
 
-    for (const [i, segment] of segments.entries()) {
+    for (const [i, segmentData] of segments.entries()) {
+        const { name, dist, totalDist } = segmentData; // Destructuring
         const actualSplitTimeInHours = (proportionalContributions[i] / sumProportionalContributions) * targetTimeInHours;
-        const speedOnSplit = segment.dist / actualSplitTimeInHours;
+        const speedOnSplit = dist / actualSplitTimeInHours;
         cumulativeTimeInHours += actualSplitTimeInHours;
-        const movingAvgSpeed = segment.totalDist / cumulativeTimeInHours;
+        const movingAvgSpeed = totalDist / cumulativeTimeInHours;
         const arrivalTime = new Date(startTime.getTime() + (cumulativeTimeInHours * 3600 * 1000));
 
         const resultData = {
-            name: segment.name,
-            dist: segment.dist.toFixed(1),
-            totalDist: segment.totalDist.toFixed(1),
+            name: name,
+            dist: dist.toFixed(1),
+            totalDist: totalDist.toFixed(1),
             timeToPoint: formatTime(cumulativeTimeInHours),
             timeOfDay: formatTimeOfDay(arrivalTime),
             splitTime: formatTime(actualSplitTimeInHours),
@@ -90,8 +99,14 @@ function calculateSplits() {
             movingAvgSpeed: movingAvgSpeed.toFixed(2)
         };
         calculatedResults.push(resultData);
+    }
+    return calculatedResults;
+}
 
-        const row = elements.resultsTableBody.insertRow();
+function populateTableWithResults(results) {
+    const fragment = document.createDocumentFragment();
+    for (const resultData of results) {
+        const row = fragment.appendChild(document.createElement('tr'));
         row.insertCell().textContent = resultData.name;
         row.insertCell().textContent = resultData.dist;
         row.insertCell().textContent = resultData.totalDist;
@@ -101,9 +116,8 @@ function calculateSplits() {
         row.insertCell().textContent = String(resultData.speedOnSplit);
         row.insertCell().textContent = resultData.movingAvgSpeed;
     }
-
-    window.lastCalculatedResults = calculatedResults;
-    renderChart(calculatedResults);
+    elements.resultsTableBody.innerHTML = ''; // Clear existing content
+    elements.resultsTableBody.appendChild(fragment); // Append new content once
 }
 
 // --- Charting Function ---
@@ -111,9 +125,11 @@ function renderChart(data) {
     if (paceChart) {
         paceChart.destroy();
     }
-    const theme = document.body.getAttribute('data-theme') || 'dark';
-    const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--chart-grid-color');
-    const fontColor = getComputedStyle(document.documentElement).getPropertyValue('--chart-font-color');
+    const theme = elements.body.getAttribute('data-theme') || 'dark'; // Use cached element
+    // Cache computed styles locally within the function
+    const computedStyles = getComputedStyle(document.documentElement);
+    const gridColor = computedStyles.getPropertyValue('--chart-grid-color');
+    const fontColor = computedStyles.getPropertyValue('--chart-font-color');
 
     paceChart = new Chart(elements.chartCanvas, {
         type: 'bar',
@@ -152,6 +168,15 @@ function renderChart(data) {
 }
 
 // --- Helper & UI Functions ---
+function debounce(func, delay) {
+    let timeoutId;
+    return function(...args) {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+            func.apply(this, args);
+        }, delay);
+    };
+}
 function formatTime(time) { return new Date(time * 3600 * 1000).toISOString().slice(11, 19); }
 function formatTimeOfDay(date) { return date.toTimeString().slice(0, 8); }
 function updateSummary() {
@@ -194,7 +219,15 @@ function exportToCSV() {
 // --- Event Listeners Setup ---
 function addEventListeners() {
     const liveInputs = [elements.targetHrInput, elements.targetMinInput, elements.targetHrSlider, elements.targetMinSlider, elements.startHrInput, elements.startMinInput, elements.pacingStrategyInput];
-    liveInputs.forEach(input => input.addEventListener('input', () => { updateSummary(); calculateSplits(); }));
+
+    function handleLiveInput() {
+        updateSummary();
+        calculateSplits();
+    }
+
+    const debouncedCalculateSplits = debounce(handleLiveInput, 250);
+
+    liveInputs.forEach(input => input.addEventListener('input', debouncedCalculateSplits));
 
     elements.targetHrInput.addEventListener('input', () => syncInputs(elements.targetHrInput, elements.targetHrSlider));
     elements.targetHrSlider.addEventListener('input', () => syncInputs(elements.targetHrSlider, elements.targetHrInput));
