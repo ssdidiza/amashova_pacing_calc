@@ -33,12 +33,12 @@
                     <div class="input-row">
                         <div class="input-group">
                             <label for="targetHr">Hours:</label>
-                            <input type="number" id="targetHr" min="2" max="8" value="4">
+                            <input type="number" id="targetHr" min="2" max="8" value="4" placeholder="hh">
                             <input type="range" id="targetHrSlider" min="2" max="8" value="4" class="slider-input">
                         </div>
                         <div class="input-group">
                             <label for="targetMin">Minutes:</label>
-                            <input type="number" id="targetMin" min="0" max="59" value="0">
+                            <input type="number" id="targetMin" min="0" max="59" value="0" placeholder="mm">
                             <input type="range" id="targetMinSlider" min="0" max="59" value="0" class="slider-input">
                         </div>
                     </div>
@@ -48,17 +48,13 @@
                     <div class="input-title">Race Start Time</div>
                     <div class="input-row">
                         <div class="input-group">
-                            <label for="startHr">Hour (24h):</label>
-                            <input type="number" id="startHr" min="0" max="23" value="6">
-                        </div>
-                        <div class="input-group">
-                            <label for="startMin">Minute:</label>
-                            <input type="number" id="startMin" min="0" max="59" value="0">
+                            <label for="startTime">Time (24h):</label>
+                            <input type="time" id="startTime" value="06:00">
                         </div>
                     </div>
                 </div>
                 <div class="input-block">
-                    <div class="input-title">Pacing Strategy</div>
+                    <div class="input-title">Pacing Strategy <span class="info-icon" id="pacingInfoIcon" tabindex="0">?</span><div class="tooltip" id="pacingTooltip"></div></div>
                     <div class="input-row">
                         <div class="input-group">
                             <label for="pacingStrategy">Style:</label>
@@ -71,6 +67,8 @@
                     </div>
                 </div>
              </div>
+
+            <div id="calculatingIndicator" class="calculating-indicator" style="display: none;">Calculating...</div>
 
             <div class="input-summary">
                 <span id="totalTime">Total Time: 4:00:00</span>
