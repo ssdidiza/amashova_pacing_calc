@@ -155,6 +155,61 @@ input:checked + .slider.round:before { transform: translateX(22px); }
     letter-spacing: 2px;
     margin-bottom: 16px;
     color: var(--text-secondary);
+    position: relative; /* For tooltip positioning */
+}
+.info-icon {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    line-height: 18px;
+    text-align: center;
+    border-radius: 50%;
+    background-color: var(--interactive-color);
+    color: var(--text-primary);
+    font-size: 0.8em;
+    font-weight: bold;
+    cursor: help;
+    margin-left: 8px;
+    position: relative; /* Ensure it's above sibling for focus */
+    z-index: 1;
+}
+.tooltip {
+    visibility: hidden;
+    width: 280px;
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    text-align: left;
+    border-radius: 8px;
+    padding: 12px;
+    position: absolute;
+    z-index: 10;
+    bottom: 125%; /* Position above the icon */
+    left: 50%;
+    margin-left: -140px; /* Half of width to center */
+    opacity: 0;
+    transition: opacity 0.3s, visibility 0.3s;
+    box-shadow: 0 4px 12px var(--shadow-color);
+    border: 1px solid var(--border-color);
+    font-size: 0.9em;
+    font-weight: normal;
+    text-transform: none;
+    letter-spacing: normal;
+}
+.tooltip::after { /* Arrow */
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: var(--border-color) transparent transparent transparent;
+}
+.info-icon:hover + .tooltip,
+.info-icon:focus + .tooltip,
+.tooltip:hover { /* Keep tooltip visible when hovering over it */
+    visibility: visible;
+    opacity: 1;
 }
 .input-row { display: flex; justify-content: center; gap: 24px; margin-bottom: 8px; }
 .input-group { display: flex; flex-direction: column; align-items: center; gap: 12px; }
@@ -235,6 +290,17 @@ button {
 button:hover { transform: translateY(-3px); box-shadow: 0 8px 20px var(--shadow-color); }
 .export-button { background: linear-gradient(45deg, #38a169, #2f855a); }
 
+.calculating-indicator {
+    text-align: center;
+    padding: 8px;
+    margin-bottom: 16px;
+    font-style: italic;
+    color: var(--text-secondary);
+    /* background-color: color-mix(in srgb, var(--interactive-color) 30%, transparent); */
+    /* border-radius: 8px; */
+    /* display: none; /* Controlled by JS */
+}
+
 /* --- Table & Chart Section --- */
 .table-container { overflow-x: auto; padding: 0 24px; border-top: 1px solid var(--border-color); }
 table { width: 100%; border-collapse: collapse; min-width: 700px; }
@@ -277,4 +343,86 @@ tbody tr:last-child td { color: var(--text-headings); }
     .theme-switch-wrapper { top: 10px; right: 10px; }
     .input-container { flex-direction: column; gap: 20px; }
     button { width: 100%; max-width: 350px; }
+}
+
+/* --- Print Styles --- */
+@media print {
+    body {
+        background: #fff !important; /* Force white background */
+        color: #000 !important; /* Force black text */
+        padding: 20px !important;
+        margin: 0 !important;
+        font-size: 10pt; /* Adjust base font size for print */
+        -webkit-print-color-adjust: exact; /* Ensure background colors/images for chart are printed if any */
+        print-color-adjust: exact;
+    }
+
+    .container {
+        box-shadow: none !important;
+        border: none !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .theme-switch-wrapper,
+    .header-section p, /* Hide "Created by..." */
+    .header-section .race-info, /* Hide "106km Cycling Race" */
+    .input-section,
+    .footer-section,
+    #exportButton { /* Also hide export button if it's separate */
+        display: none !important;
+    }
+
+    .main-title, .subtitle {
+        color: #000 !important; /* Ensure titles are black */
+        -webkit-text-fill-color: initial !important; /* Override gradient for print */
+        background: none !important;
+        text-align: center;
+        margin-bottom: 10px;
+    }
+    .main-title { font-size: 18pt !important; }
+    .subtitle { font-size: 14pt !important; }
+
+    #output-section, .table-container, .chart-container {
+        padding: 0 !important;
+        margin: 0 0 20px 0 !important; /* Add some margin between elements */
+        border: none !important;
+        page-break-inside: avoid; /* Try to keep sections from breaking across pages */
+    }
+
+    table {
+        width: 100% !important;
+        min-width: 0 !important; /* Allow table to shrink */
+        font-size: 9pt;
+    }
+    thead th {
+        background-color: #eee !important; /* Light grey for header */
+        color: #000 !important;
+        padding: 8px 10px !important;
+    }
+    tbody td {
+        padding: 8px 10px !important;
+        border-bottom: 1px solid #ccc !important;
+        color: #000 !important;
+    }
+    tbody tr:last-child {
+        font-weight: bold;
+        border-top: 2px solid #000 !important;
+    }
+     tbody tr:last-child td {
+        color: #000 !important;
+    }
+
+
+    .chart-container canvas {
+        max-width: 100% !important;
+        max-height: 60vh; /* Limit chart height on print */
+        page-break-before: auto; /* Allow page break before chart if needed */
+    }
+
+    /* Ensure chart.js colors are suitable for print if they rely on CSS vars that are overridden */
+    /* This might require JavaScript to re-render chart with print-specific colors if themes are too complex */
+    /* For now, assuming Chart.js uses inline styles or simple colors that print okay */
 }

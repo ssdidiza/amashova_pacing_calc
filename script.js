@@ -4,8 +4,7 @@ const elements = {
     targetMinInput: document.getElementById('targetMin'),
     targetHrSlider: document.getElementById('targetHrSlider'),
     targetMinSlider: document.getElementById('targetMinSlider'),
-    startHrInput: document.getElementById('startHr'),
-    startMinInput: document.getElementById('startMin'),
+    startTimeInput: document.getElementById('startTime'), // Changed from startHrInput and startMinInput
     pacingStrategyInput: document.getElementById('pacingStrategy'),
     resultsTableBody: document.getElementById('resultsTableBody'),
     avgSpeedSpan: document.getElementById('avgSpeed'),
@@ -16,6 +15,7 @@ const elements = {
     body: document.body,
     chartContainer: document.querySelector('.chart-container'),
     chartCanvas: document.getElementById('paceChart'),
+    calculatingIndicator: document.getElementById('calculatingIndicator'), // Added indicator
 };
 
 // --- Global State & Data ---
@@ -56,8 +56,11 @@ function calculateSplits() {
     elements.resultsTableBody.classList.add('recalculating');
     elements.chartContainer.classList.add('recalculating');
 
-    const startHr = parseInt(elements.startHrInput.value) || 0;
-    const startMin = parseInt(elements.startMinInput.value) || 0;
+    const startTimeValue = elements.startTimeInput.value; // "HH:MM"
+    const [startHrStr, startMinStr] = startTimeValue.split(':');
+    const startHr = parseInt(startHrStr) || 0;
+    const startMin = parseInt(startMinStr) || 0;
+
     const selectedPacing = elements.pacingStrategyInput.value;
     const startTime = new Date();
     startTime.setHours(startHr, startMin, 0, 0);
@@ -69,6 +72,8 @@ function calculateSplits() {
 
     window.lastCalculatedResults = calculatedResults;
     renderChart(calculatedResults);
+
+    if (elements.calculatingIndicator) elements.calculatingIndicator.style.display = 'none';
 }
 
 // --- Calculation Helper Functions ---
@@ -216,23 +221,67 @@ function exportToCSV() {
     document.body.removeChild(link);
 }
 
+// --- User Settings Persistence ---
+function saveUserSettings() {
+    const settings = {
+        targetHr: elements.targetHrInput.value,
+        targetMin: elements.targetMinInput.value,
+        startTime: elements.startTimeInput.value, // Changed from startHr and startMin
+        pacingStrategy: elements.pacingStrategyInput.value,
+    };
+    localStorage.setItem('userSettings', JSON.stringify(settings));
+}
+
+function loadUserSettings() {
+    const savedSettings = localStorage.getItem('userSettings');
+    if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        elements.targetHrInput.value = settings.targetHr || '2';
+        elements.targetMinInput.value = settings.targetMin || '30';
+        elements.startTimeInput.value = settings.startTime || '06:00'; // Changed
+        elements.pacingStrategyInput.value = settings.pacingStrategy || 'even';
+
+        // Sync sliders after loading values into text inputs
+        syncInputs(elements.targetHrInput, elements.targetHrSlider);
+        syncInputs(elements.targetMinInput, elements.targetMinSlider);
+    }
+}
+
 // --- Event Listeners Setup ---
 function addEventListeners() {
-    const liveInputs = [elements.targetHrInput, elements.targetMinInput, elements.targetHrSlider, elements.targetMinSlider, elements.startHrInput, elements.startMinInput, elements.pacingStrategyInput];
+    const liveInputs = [elements.targetHrInput, elements.targetMinInput, elements.targetHrSlider, elements.targetMinSlider, elements.startTimeInput, elements.pacingStrategyInput]; // Updated list
 
     function handleLiveInput() {
-        updateSummary();
-        calculateSplits();
+        if (elements.calculatingIndicator) elements.calculatingIndicator.style.display = 'block';
+
+        // Use a short timeout to allow the indicator to render before potentially blocking operations
+        setTimeout(() => {
+            updateSummary();
+            calculateSplits(); // This function now contains the logic to hide the indicator
+            saveUserSettings();
+        }, 10); // 10ms delay
     }
 
-    const debouncedCalculateSplits = debounce(handleLiveInput, 250);
+    const debouncedHandler = debounce(handleLiveInput, 250);
 
-    liveInputs.forEach(input => input.addEventListener('input', debouncedCalculateSplits));
+    liveInputs.forEach(input => input.addEventListener('input', debouncedHandler));
+
+    // Event listeners for syncing text inputs and sliders
+    // These ensure that when a text input changes, its corresponding slider updates, and vice-versa.
+    // The 'input' event on these will then be caught by liveInputs listener above to trigger calculations and saving.
 
     elements.targetHrInput.addEventListener('input', () => syncInputs(elements.targetHrInput, elements.targetHrSlider));
-    elements.targetHrSlider.addEventListener('input', () => syncInputs(elements.targetHrSlider, elements.targetHrInput));
+    elements.targetHrSlider.addEventListener('input', () => {
+        syncInputs(elements.targetHrSlider, elements.targetHrInput);
+        // Manually trigger event on targetHrInput to ensure debouncedHandler is called,
+        // as programmatic changes to input value don't fire 'input' event.
+        elements.targetHrInput.dispatchEvent(new Event('input', { bubbles:true }));
+    });
     elements.targetMinInput.addEventListener('input', () => syncInputs(elements.targetMinInput, elements.targetMinSlider));
-    elements.targetMinSlider.addEventListener('input', () => syncInputs(elements.targetMinSlider, elements.targetMinInput));
+    elements.targetMinSlider.addEventListener('input', () => {
+        syncInputs(elements.targetMinSlider, elements.targetMinInput);
+        elements.targetMinInput.dispatchEvent(new Event('input', { bubbles:true }));
+    });
 
     elements.exportButton.addEventListener('click', exportToCSV);
     elements.themeToggle.addEventListener('change', toggleTheme);
@@ -240,8 +289,20 @@ function addEventListeners() {
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
-    setInitialTheme();
+    setInitialTheme(); // Theme first
+    loadUserSettings(); // Load user settings before first calculation
     addEventListeners();
-    updateSummary();
-    calculateSplits();
+
+    // Populate pacing strategy tooltip content
+    const pacingTooltip = document.getElementById('pacingTooltip');
+    if (pacingTooltip) {
+        pacingTooltip.innerHTML = `
+            <strong>Even Pace:</strong> Attempts to maintain a consistent effort relative to terrain difficulty across all segments.<br><br>
+            <strong>Conservative Start:</strong> Starts easier than your average pace and aims to finish stronger. Good for avoiding 'bonking' and preserving energy for the later stages.<br><br>
+            <strong>Aggressive Start:</strong> Begins faster than your average pace. A high-risk, high-reward strategy that suits experienced riders aiming for a fast time, but requires careful energy management.
+        `;
+    }
+
+    updateSummary(); // Update summary based on loaded/default values
+    calculateSplits(); // Perform initial calculation
 });
