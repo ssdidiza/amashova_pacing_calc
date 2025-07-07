@@ -20,6 +20,7 @@ const elements = {
 
 // --- Global State & Data ---
 let paceChart = null; // To hold the chart instance
+let lastCalculatedResults = null; // To hold the last calculated results - Moved from window scope
 const segments = [
     { name: "WT1 Thornville", dist: 24.5, totalDist: 24.5 }, // Shortened names for chart
     { name: "WT2 Cato Ridge", dist: 17.3, totalDist: 41.8 },
@@ -39,8 +40,21 @@ const totalRaceDistance = 106.0;
 function calculateSplits() {
     elements.timeErrorSpan.textContent = '';
 
-    const targetHr = parseInt(elements.targetHrInput.value) || 0;
-    const targetMin = parseInt(elements.targetMinInput.value) || 0;
+    const targetHr = parseInt(elements.targetHrInput.value);
+    const targetMin = parseInt(elements.targetMinInput.value);
+    const startTimeValue = elements.startTimeInput.value; // "HH:MM"
+    const [startHrStr, startMinStr] = startTimeValue.split(':');
+    const startHr = parseInt(startHrStr);
+    const startMin = parseInt(startMinStr);
+
+    if (isNaN(targetHr) || isNaN(targetMin) || isNaN(startHr) || isNaN(startMin)) {
+        elements.timeErrorSpan.textContent = 'Hours and minutes must be valid numbers.';
+        elements.resultsTableBody.innerHTML = ''; // Clear previous results
+        if (paceChart) paceChart.destroy();      // Clear chart
+        if (elements.calculatingIndicator) elements.calculatingIndicator.style.display = 'none';
+        return;
+    }
+
     const targetTimeInHours = targetHr + (targetMin / 60);
 
     if (targetTimeInHours <= 0) {
@@ -56,11 +70,6 @@ function calculateSplits() {
     elements.resultsTableBody.classList.add('recalculating');
     elements.chartContainer.classList.add('recalculating');
 
-    const startTimeValue = elements.startTimeInput.value; // "HH:MM"
-    const [startHrStr, startMinStr] = startTimeValue.split(':');
-    const startHr = parseInt(startHrStr) || 0;
-    const startMin = parseInt(startMinStr) || 0;
-
     const selectedPacing = elements.pacingStrategyInput.value;
     const startTime = new Date();
     startTime.setHours(startHr, startMin, 0, 0);
@@ -70,7 +79,7 @@ function calculateSplits() {
     const calculatedResults = generateSplitData(targetTimeInHours, selectedPacing, startTime);
     populateTableWithResults(calculatedResults);
 
-    window.lastCalculatedResults = calculatedResults;
+    lastCalculatedResults = calculatedResults; // Use module-scoped variable
     renderChart(calculatedResults);
 
     if (elements.calculatingIndicator) elements.calculatingIndicator.style.display = 'none';
@@ -199,16 +208,16 @@ function toggleTheme() {
     const newTheme = elements.themeToggle.checked ? 'light' : 'dark';
     elements.body.setAttribute('data-theme', newTheme);
     localStorage.setItem('theme', newTheme);
-    if (window.lastCalculatedResults) {
-        renderChart(window.lastCalculatedResults);
+    if (lastCalculatedResults) { // Use module-scoped variable
+        renderChart(lastCalculatedResults);
     }
 }
 
 // --- CSV Export ---
 function exportToCSV() {
-    if (!window.lastCalculatedResults) { return; }
+    if (!lastCalculatedResults) { return; } // Use module-scoped variable
     let csvContent = "Point on Route,Dist (km),Total Dist (km),Time to Point,Time of Day,Split Time,Speed on Split (km/h),Moving Average Speed (km/h)\n";
-    window.lastCalculatedResults.forEach(row => {
+    lastCalculatedResults.forEach(row => { // Use module-scoped variable
         csvContent += `"${row.name}",${row.dist},${row.totalDist},${row.timeToPoint},${row.timeOfDay},${row.splitTime},${row.speedOnSplit},${row.movingAvgSpeed}\n`;
     });
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -264,23 +273,23 @@ function addEventListeners() {
 
     const debouncedHandler = debounce(handleLiveInput, 250);
 
+    // Attach the main debounced handler to all live inputs (including sliders)
     liveInputs.forEach(input => input.addEventListener('input', debouncedHandler));
 
-    // Event listeners for syncing text inputs and sliders
-    // These ensure that when a text input changes, its corresponding slider updates, and vice-versa.
-    // The 'input' event on these will then be caught by liveInputs listener above to trigger calculations and saving.
-
-    elements.targetHrInput.addEventListener('input', () => syncInputs(elements.targetHrInput, elements.targetHrSlider));
+    // Separate listeners JUST for syncing the visual state of paired inputs (text <-> slider)
+    // These do NOT need to trigger calculations, as the debouncedHandler above will take care of it
+    // when the input's value actually changes.
+    elements.targetHrInput.addEventListener('input', () => {
+        syncInputs(elements.targetHrInput, elements.targetHrSlider);
+    });
     elements.targetHrSlider.addEventListener('input', () => {
         syncInputs(elements.targetHrSlider, elements.targetHrInput);
-        // Manually trigger event on targetHrInput to ensure debouncedHandler is called,
-        // as programmatic changes to input value don't fire 'input' event.
-        elements.targetHrInput.dispatchEvent(new Event('input', { bubbles:true }));
     });
-    elements.targetMinInput.addEventListener('input', () => syncInputs(elements.targetMinInput, elements.targetMinSlider));
+    elements.targetMinInput.addEventListener('input', () => {
+        syncInputs(elements.targetMinInput, elements.targetMinSlider);
+    });
     elements.targetMinSlider.addEventListener('input', () => {
         syncInputs(elements.targetMinSlider, elements.targetMinInput);
-        elements.targetMinInput.dispatchEvent(new Event('input', { bubbles:true }));
     });
 
     elements.exportButton.addEventListener('click', exportToCSV);
