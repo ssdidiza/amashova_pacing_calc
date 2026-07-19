@@ -3,113 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Amashova Split Time Predictor</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="description" content="Plan your Amashova Durban Classic target time, checkpoint arrivals and segment pacing.">
+    <meta name="theme-color" content="#0b1220">
+    <title>Amashova Pacing Calculator</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
+    <script src="script.js" defer></script>
 </head>
 <body data-theme="dark">
-    <div class="theme-switch-wrapper">
-        <label class="theme-switch" for="theme-toggle">
-            <input type="checkbox" id="theme-toggle" />
-            <span class="slider round"></span>
-        </label>
-    </div>
+    <button id="themeToggle" class="theme-toggle" type="button" aria-label="Switch to light theme" title="Change colour theme">
+        <span aria-hidden="true">◐</span>
+    </button>
 
-    <div class="container">
-        <div class="header-section">
-            <h1 class="main-title">Amashova Durban Classic</h1>
-            <p>Created by <a href="https://www.strava.com/athletes/26187606" target="_blank">Spera Didiza</a></p>
-            <h2 class="subtitle">Split Time Calculator</h2>
-            <div class="race-info"><span>106km Cycling Race</span></div>
-        </div>
-
-        <div class="input-section">
-             <div class="input-container">
-                <div class="input-block">
-                    <div class="input-title">Target Time</div>
-                    <div class="input-row">
-                        <div class="input-group">
-                            <label for="targetHr">Hours:</label>
-                            <input type="number" id="targetHr" min="2" max="8" value="4" placeholder="hh">
-                            <input type="range" id="targetHrSlider" min="2" max="8" value="4" class="slider-input">
-                        </div>
-                        <div class="input-group">
-                            <label for="targetMin">Minutes:</label>
-                            <input type="number" id="targetMin" min="0" max="59" value="0" placeholder="mm">
-                            <input type="range" id="targetMinSlider" min="0" max="59" value="0" class="slider-input">
-                        </div>
-                    </div>
-                    <span id="timeError" class="error-message"></span>
-                </div>
-                <div class="input-block">
-                    <div class="input-title">Race Start Time</div>
-                    <div class="input-row">
-                        <div class="input-group">
-                            <label for="startTime">Time (24h):</label>
-                            <input type="time" id="startTime" value="06:00">
-                        </div>
-                    </div>
-                </div>
-                <div class="input-block">
-                    <div class="input-title">Pacing Strategy <span class="info-icon" id="pacingInfoIcon" tabindex="0">?</span><div class="tooltip" id="pacingTooltip"></div></div>
-                    <div class="input-row">
-                        <div class="input-group">
-                            <label for="pacingStrategy">Style:</label>
-                            <select id="pacingStrategy">
-                                <option value="even" selected>Even Pace</option>
-                                <option value="conservative">Conservative Start</option>
-                                <option value="aggressive">Aggressive Start</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-             </div>
-
-            <div id="calculatingIndicator" class="calculating-indicator" style="display: none;">Calculating...</div>
-
-            <div class="input-summary">
-                <span id="totalTime">Total Time: 4:00:00</span>
-                <span id="avgSpeedBox">Average Speed: <span id="avgSpeed">0.00</span> km/h</span>
+    <main class="app-shell">
+        <header class="hero">
+            <div class="eyebrow-row">
+                <span class="eyebrow">Race-day planning tool</span>
+                <span class="version">Version 2.0 · July 2026</span>
             </div>
-            <div class="button-row">
-                <button id="exportButton" class="export-button">Export to CSV</button>
-            </div>
-        </div>
+            <h1>Amashova Durban Classic</h1>
+            <p class="hero-copy">Build a clear 106 km pacing plan with target checkpoint arrival times and segment speed guidance.</p>
+            <p class="creator">Created by <a href="https://www.strava.com/athletes/26187606" target="_blank" rel="noopener noreferrer">Spera Didiza</a></p>
+        </header>
 
-        <div id="output-section">
+        <section class="planner-card" aria-labelledby="plannerTitle">
+            <div class="section-heading">
+                <div>
+                    <p class="kicker">Your plan</p>
+                    <h2 id="plannerTitle">Set a target</h2>
+                </div>
+                <p class="model-note">Classic calculation model retained</p>
+            </div>
+
+            <div class="controls-grid">
+                <fieldset class="control-group">
+                    <legend>Target finish time</legend>
+                    <div class="time-inputs">
+                        <label>
+                            <span>Hours</span>
+                            <input type="number" id="targetHr" min="2" max="8" step="1" value="4" inputmode="numeric">
+                        </label>
+                        <label>
+                            <span>Minutes</span>
+                            <input type="number" id="targetMin" min="0" max="59" step="1" value="0" inputmode="numeric">
+                        </label>
+                    </div>
+                    <label class="range-label" for="targetTimeSlider">
+                        <span>Adjust target</span>
+                        <input type="range" id="targetTimeSlider" min="120" max="480" step="5" value="240">
+                    </label>
+                </fieldset>
+
+                <fieldset class="control-group">
+                    <legend>Race start</legend>
+                    <label class="full-control" for="startTime">
+                        <span>Start time</span>
+                        <input type="time" id="startTime" value="06:00">
+                    </label>
+                </fieldset>
+
+                <fieldset class="control-group">
+                    <legend>Pacing style</legend>
+                    <label class="full-control" for="pacingStrategy">
+                        <span>Strategy</span>
+                        <select id="pacingStrategy">
+                            <option value="even" selected>Even pace</option>
+                            <option value="conservative">Conservative start</option>
+                            <option value="aggressive">Aggressive start</option>
+                        </select>
+                    </label>
+                    <p id="strategyDescription" class="strategy-description"></p>
+                </fieldset>
+            </div>
+
+            <p id="timeError" class="error-message" role="alert" aria-live="polite"></p>
+
+            <div class="summary-strip" aria-live="polite">
+                <div>
+                    <span class="summary-label">Target time</span>
+                    <strong id="totalTime">4:00:00</strong>
+                </div>
+                <div>
+                    <span class="summary-label">Required average</span>
+                    <strong><span id="avgSpeed">26.50</span> km/h</strong>
+                </div>
+                <div>
+                    <span class="summary-label">Estimated finish</span>
+                    <strong id="finishTime">10:00</strong>
+                </div>
+            </div>
+
+            <div class="action-row">
+                <button id="shareButton" class="button primary" type="button">Copy share link</button>
+                <button id="printButton" class="button secondary" type="button">Print / Save PDF</button>
+                <button id="exportButton" class="button ghost" type="button">Export CSV</button>
+            </div>
+            <p id="actionStatus" class="action-status" aria-live="polite"></p>
+        </section>
+
+        <section class="results-section" aria-labelledby="resultsTitle">
+            <div class="section-heading results-heading">
+                <div>
+                    <p class="kicker">Race guide</p>
+                    <h2 id="resultsTitle">Checkpoint plan</h2>
+                </div>
+                <p id="planSummary" class="plan-summary"></p>
+            </div>
+
+            <div id="mobileResults" class="mobile-results" aria-label="Checkpoint cards"></div>
+
             <div class="table-container">
                 <table>
                     <thead>
                         <tr>
-                            <th>Point on Route</th>
-                            <th>Dist (km)</th>
-                            <th>Total Dist (km)</th>
-                            <th>Time to Point</th>
-                            <th>Time of Day</th>
-                            <th>Split Time</th>
-                            <th>Speed on Split (km/h)</th>
-                            <th>Moving Average Speed (km/h)</th>
+                            <th>Checkpoint</th>
+                            <th>Total km</th>
+                            <th>Arrival</th>
+                            <th>Elapsed</th>
+                            <th>Split</th>
+                            <th>Split speed</th>
+                            <th>Moving avg.</th>
                         </tr>
                     </thead>
                     <tbody id="resultsTableBody"></tbody>
                 </table>
             </div>
-        </div>
-        
-        <div class="chart-container">
-            <canvas id="paceChart"></canvas>
-        </div>
+        </section>
 
-        <div class="footer-section">
-            <p>Split Time Calculator - Amashova Durban Classic Cycling Race</p>
-            <p class="footer-note">Adjust your target time, start time, and pacing strategy to see predicted splits</p>
-            <p class="footer-disclaimer">* Times calculated based on terrain difficulty and chosen pacing strategy</p>
-        </div>
-    </div>
+        <section class="chart-card" aria-labelledby="chartTitle">
+            <div class="section-heading compact">
+                <div>
+                    <p class="kicker">Effort profile</p>
+                    <h2 id="chartTitle">Speed by segment</h2>
+                </div>
+            </div>
+            <div class="chart-wrap">
+                <canvas id="paceChart"></canvas>
+            </div>
+        </section>
 
-    <script src="script.js"></script>
+        <section class="notice-card">
+            <h2>Use this as guidance, not a guarantee</h2>
+            <p>This calculator estimates pacing from fixed route segments and the selected strategy. Weather, traffic, bunch dynamics, fitness, mechanical issues and route changes can materially affect actual times. Confirm official race information before race day.</p>
+        </section>
+
+        <footer>
+            <p>Amashova Pacing Calculator · Free community tool</p>
+        </footer>
+    </main>
 </body>
 </html>
