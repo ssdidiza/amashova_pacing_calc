@@ -1,317 +1,387 @@
-// --- DOM Element Selection ---
+'use strict';
+
 const elements = {
-    targetHrInput: document.getElementById('targetHr'),
-    targetMinInput: document.getElementById('targetMin'),
-    targetHrSlider: document.getElementById('targetHrSlider'),
-    targetMinSlider: document.getElementById('targetMinSlider'),
-    startTimeInput: document.getElementById('startTime'), // Changed from startHrInput and startMinInput
-    pacingStrategyInput: document.getElementById('pacingStrategy'),
+    targetHr: document.getElementById('targetHr'),
+    targetMin: document.getElementById('targetMin'),
+    targetTimeSlider: document.getElementById('targetTimeSlider'),
+    startTime: document.getElementById('startTime'),
+    pacingStrategy: document.getElementById('pacingStrategy'),
+    strategyDescription: document.getElementById('strategyDescription'),
+    timeError: document.getElementById('timeError'),
+    totalTime: document.getElementById('totalTime'),
+    avgSpeed: document.getElementById('avgSpeed'),
+    finishTime: document.getElementById('finishTime'),
+    planSummary: document.getElementById('planSummary'),
     resultsTableBody: document.getElementById('resultsTableBody'),
-    avgSpeedSpan: document.getElementById('avgSpeed'),
-    totalTimeSpan: document.getElementById('totalTime'),
-    timeErrorSpan: document.getElementById('timeError'),
+    mobileResults: document.getElementById('mobileResults'),
+    paceChart: document.getElementById('paceChart'),
+    shareButton: document.getElementById('shareButton'),
+    printButton: document.getElementById('printButton'),
     exportButton: document.getElementById('exportButton'),
-    themeToggle: document.getElementById('theme-toggle'),
-    body: document.body,
-    chartContainer: document.querySelector('.chart-container'),
-    chartCanvas: document.getElementById('paceChart'),
-    calculatingIndicator: document.getElementById('calculatingIndicator'), // Added indicator
+    actionStatus: document.getElementById('actionStatus'),
+    themeToggle: document.getElementById('themeToggle'),
+    body: document.body
 };
 
-// --- Global State & Data ---
-let paceChart = null; // To hold the chart instance
-let lastCalculatedResults = null; // To hold the last calculated results - Moved from window scope
+let paceChart = null;
+let lastCalculatedResults = [];
+
+// Calculation inputs intentionally retained from the previous live version.
 const segments = [
-    { name: "WT1 Thornville", dist: 24.5, totalDist: 24.5 }, // Shortened names for chart
-    { name: "WT2 Cato Ridge", dist: 17.3, totalDist: 41.8 },
-    { name: "WT3 Wall of Fame", dist: 13.5, totalDist: 55.3 },
-    { name: "Gilletts Station", dist: 19.2, totalDist: 74.5 },
-    { name: "45th Cutting", dist: 19.2, totalDist: 93.7 },
-    { name: "Finish Suncoast", dist: 12.3, totalDist: 106.0 }
+    { name: 'WT1 Thornville', dist: 24.5, totalDist: 24.5 },
+    { name: 'WT2 Cato Ridge', dist: 17.3, totalDist: 41.8 },
+    { name: 'WT3 Wall of Fame', dist: 13.5, totalDist: 55.3 },
+    { name: 'Gilletts Station', dist: 19.2, totalDist: 74.5 },
+    { name: '45th Cutting', dist: 19.2, totalDist: 93.7 },
+    { name: 'Finish Suncoast', dist: 12.3, totalDist: 106.0 }
 ];
+
 const pacingStrategies = {
     even: [1.1577, 1.0815, 1.0915, 0.9512, 0.7948, 0.8830],
     conservative: [1.25, 1.10, 1.09, 0.94, 0.78, 0.80],
     aggressive: [1.05, 1.06, 1.10, 0.96, 0.81, 0.98]
 };
+
+const strategyDescriptions = {
+    even: 'Balances effort against the route profile across all six segments.',
+    conservative: 'Starts more cautiously and preserves more effort for the second half.',
+    aggressive: 'Front-loads effort. Higher risk and better suited to experienced riders.'
+};
+
 const totalRaceDistance = 106.0;
+const STORAGE_KEY = 'amashovaPacingSettingsV2';
 
-// --- Main Calculation Function ---
-function calculateSplits() {
-    elements.timeErrorSpan.textContent = '';
-
-    const targetHr = parseInt(elements.targetHrInput.value);
-    const targetMin = parseInt(elements.targetMinInput.value);
-    const startTimeValue = elements.startTimeInput.value; // "HH:MM"
-    const [startHrStr, startMinStr] = startTimeValue.split(':');
-    const startHr = parseInt(startHrStr);
-    const startMin = parseInt(startMinStr);
-
-    if (isNaN(targetHr) || isNaN(targetMin) || isNaN(startHr) || isNaN(startMin)) {
-        elements.timeErrorSpan.textContent = 'Hours and minutes must be valid numbers.';
-        elements.resultsTableBody.innerHTML = ''; // Clear previous results
-        if (paceChart) paceChart.destroy();      // Clear chart
-        if (elements.calculatingIndicator) elements.calculatingIndicator.style.display = 'none';
-        return;
-    }
-
-    const targetTimeInHours = targetHr + (targetMin / 60);
-
-    if (targetTimeInHours <= 0) {
-        elements.timeErrorSpan.textContent = 'Target time must be greater than zero.';
-        elements.resultsTableBody.innerHTML = '';
-        if (paceChart) paceChart.destroy();
-        return;
-    }
-
-    elements.resultsTableBody.classList.remove('recalculating');
-    elements.chartContainer.classList.remove('recalculating');
-    void elements.resultsTableBody.offsetWidth;
-    elements.resultsTableBody.classList.add('recalculating');
-    elements.chartContainer.classList.add('recalculating');
-
-    const selectedPacing = elements.pacingStrategyInput.value;
-    const startTime = new Date();
-    startTime.setHours(startHr, startMin, 0, 0);
-
-    elements.avgSpeedSpan.textContent = (totalRaceDistance / targetTimeInHours).toFixed(2);
-
-    const calculatedResults = generateSplitData(targetTimeInHours, selectedPacing, startTime);
-    populateTableWithResults(calculatedResults);
-
-    lastCalculatedResults = calculatedResults; // Use module-scoped variable
-    renderChart(calculatedResults);
-
-    if (elements.calculatingIndicator) elements.calculatingIndicator.style.display = 'none';
+function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
 }
 
-// --- Calculation Helper Functions ---
-function generateSplitData(targetTimeInHours, selectedPacing, startTime) {
-    const timeFactors = pacingStrategies[selectedPacing];
+function readInputs() {
+    const hours = Number.parseInt(elements.targetHr.value, 10);
+    const minutes = Number.parseInt(elements.targetMin.value, 10);
+    const [startHour, startMinute] = elements.startTime.value.split(':').map(Number);
+
+    if (![hours, minutes, startHour, startMinute].every(Number.isFinite)) {
+        return { error: 'Enter a valid target time and race start time.' };
+    }
+
+    if (hours < 2 || hours > 8 || minutes < 0 || minutes > 59) {
+        return { error: 'Target time must be between 2:00 and 8:59.' };
+    }
+
+    return {
+        hours,
+        minutes,
+        targetTimeInHours: hours + (minutes / 60),
+        startHour,
+        startMinute,
+        strategy: elements.pacingStrategy.value
+    };
+}
+
+function calculateResults(input) {
+    const timeFactors = pacingStrategies[input.strategy];
     const proportionalContributions = segments.map((segment, index) => segment.dist * timeFactors[index]);
-    const sumProportionalContributions = proportionalContributions.reduce((sum, val) => sum + val, 0);
+    const sumProportionalContributions = proportionalContributions.reduce((sum, value) => sum + value, 0);
+    const startTime = new Date(2000, 0, 1, input.startHour, input.startMinute, 0, 0);
 
     let cumulativeTimeInHours = 0;
-    const calculatedResults = [];
 
-    for (const [i, segmentData] of segments.entries()) {
-        const { name, dist, totalDist } = segmentData; // Destructuring
-        const actualSplitTimeInHours = (proportionalContributions[i] / sumProportionalContributions) * targetTimeInHours;
-        const speedOnSplit = dist / actualSplitTimeInHours;
-        cumulativeTimeInHours += actualSplitTimeInHours;
-        const movingAvgSpeed = totalDist / cumulativeTimeInHours;
-        const arrivalTime = new Date(startTime.getTime() + (cumulativeTimeInHours * 3600 * 1000));
+    return segments.map((segment, index) => {
+        const splitHours = (proportionalContributions[index] / sumProportionalContributions) * input.targetTimeInHours;
+        const speedOnSplit = segment.dist / splitHours;
+        cumulativeTimeInHours += splitHours;
+        const movingAverage = segment.totalDist / cumulativeTimeInHours;
+        const arrivalTime = new Date(startTime.getTime() + (cumulativeTimeInHours * 3600000));
 
-        const resultData = {
-            name: name,
-            dist: dist.toFixed(1),
-            totalDist: totalDist.toFixed(1),
-            timeToPoint: formatTime(cumulativeTimeInHours),
-            timeOfDay: formatTimeOfDay(arrivalTime),
-            splitTime: formatTime(actualSplitTimeInHours),
-            speedOnSplit: parseFloat(speedOnSplit.toFixed(2)),
-            movingAvgSpeed: movingAvgSpeed.toFixed(2)
+        return {
+            name: segment.name,
+            dist: segment.dist.toFixed(1),
+            totalDist: segment.totalDist.toFixed(1),
+            timeToPoint: formatDuration(cumulativeTimeInHours),
+            timeOfDay: formatClock(arrivalTime),
+            splitTime: formatDuration(splitHours),
+            speedOnSplit: Number(speedOnSplit.toFixed(2)),
+            movingAvgSpeed: Number(movingAverage.toFixed(2))
         };
-        calculatedResults.push(resultData);
-    }
-    return calculatedResults;
+    });
 }
 
-function populateTableWithResults(results) {
-    const fragment = document.createDocumentFragment();
-    for (const resultData of results) {
-        const row = fragment.appendChild(document.createElement('tr'));
-        row.insertCell().textContent = resultData.name;
-        row.insertCell().textContent = resultData.dist;
-        row.insertCell().textContent = resultData.totalDist;
-        row.insertCell().textContent = resultData.timeToPoint;
-        row.insertCell().textContent = resultData.timeOfDay;
-        row.insertCell().textContent = resultData.splitTime;
-        row.insertCell().textContent = String(resultData.speedOnSplit);
-        row.insertCell().textContent = resultData.movingAvgSpeed;
-    }
-    elements.resultsTableBody.innerHTML = ''; // Clear existing content
-    elements.resultsTableBody.appendChild(fragment); // Append new content once
+function formatDuration(hours) {
+    const totalSeconds = Math.round(hours * 3600);
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-// --- Charting Function ---
-function renderChart(data) {
-    if (paceChart) {
-        paceChart.destroy();
-    }
-    const theme = elements.body.getAttribute('data-theme') || 'dark'; // Use cached element
-    // Cache computed styles locally within the function
-    const computedStyles = getComputedStyle(document.documentElement);
-    const gridColor = computedStyles.getPropertyValue('--chart-grid-color');
-    const fontColor = computedStyles.getPropertyValue('--chart-font-color');
+function formatClock(date) {
+    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
 
-    paceChart = new Chart(elements.chartCanvas, {
+function renderTable(results) {
+    elements.resultsTableBody.replaceChildren(...results.map((result) => {
+        const row = document.createElement('tr');
+        const values = [
+            result.name,
+            result.totalDist,
+            result.timeOfDay,
+            result.timeToPoint,
+            result.splitTime,
+            `${result.speedOnSplit.toFixed(2)} km/h`,
+            `${result.movingAvgSpeed.toFixed(2)} km/h`
+        ];
+        values.forEach((value) => {
+            const cell = document.createElement('td');
+            cell.textContent = value;
+            row.appendChild(cell);
+        });
+        return row;
+    }));
+}
+
+function renderMobileCards(results) {
+    elements.mobileResults.replaceChildren(...results.map((result, index) => {
+        const article = document.createElement('article');
+        article.className = 'checkpoint-card';
+        article.innerHTML = `
+            <div class="checkpoint-topline">
+                <span class="checkpoint-number">${String(index + 1).padStart(2, '0')}</span>
+                <span>${result.totalDist} km</span>
+            </div>
+            <h3>${result.name}</h3>
+            <div class="checkpoint-metrics">
+                <div><span>Arrival</span><strong>${result.timeOfDay}</strong></div>
+                <div><span>Elapsed</span><strong>${result.timeToPoint}</strong></div>
+                <div><span>Split</span><strong>${result.splitTime}</strong></div>
+                <div><span>Speed</span><strong>${result.speedOnSplit.toFixed(2)} km/h</strong></div>
+            </div>
+        `;
+        return article;
+    }));
+}
+
+function renderChart(results) {
+    if (typeof Chart === 'undefined') return;
+    if (paceChart) paceChart.destroy();
+
+    const styles = getComputedStyle(document.documentElement);
+    const textColor = styles.getPropertyValue('--text-muted').trim();
+    const gridColor = styles.getPropertyValue('--border').trim();
+    const accent = styles.getPropertyValue('--accent').trim();
+
+    paceChart = new Chart(elements.paceChart, {
         type: 'bar',
         data: {
-            labels: data.map(row => row.name),
+            labels: results.map((result) => result.name.replace('WT1 ', '').replace('WT2 ', '').replace('WT3 ', '')),
             datasets: [{
-                label: 'Speed on Split (km/h)',
-                data: data.map(row => row.speedOnSplit),
-                backgroundColor: theme === 'dark' ? 'rgba(79, 209, 197, 0.6)' : 'rgba(49, 151, 149, 0.7)',
-                borderColor: theme === 'dark' ? 'rgba(79, 209, 197, 1)' : 'rgba(49, 151, 149, 1)',
-                borderWidth: 2,
-                borderRadius: 4
+                data: results.map((result) => result.speedOnSplit),
+                backgroundColor: accent,
+                borderRadius: 8,
+                maxBarThickness: 56
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: true,
+            maintainAspectRatio: false,
+            animation: { duration: 250 },
             plugins: {
                 legend: { display: false },
-                title: { display: true, text: 'Pacing Speed Per Segment', color: fontColor, font: { size: 16 } }
+                tooltip: { callbacks: { label: (context) => `${context.raw.toFixed(2)} km/h` } }
             },
             scales: {
                 y: {
                     beginAtZero: false,
-                    title: { display: true, text: 'Speed (km/h)', color: fontColor },
                     grid: { color: gridColor },
-                    ticks: { color: fontColor }
+                    ticks: { color: textColor, callback: (value) => `${value} km/h` }
                 },
                 x: {
-                    grid: { color: 'transparent' },
-                    ticks: { color: fontColor }
+                    grid: { display: false },
+                    ticks: { color: textColor, maxRotation: 0, autoSkip: false }
                 }
             }
         }
     });
 }
 
-// --- Helper & UI Functions ---
-function debounce(func, delay) {
-    let timeoutId;
-    return function(...args) {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => {
-            func.apply(this, args);
-        }, delay);
-    };
+function updatePlan() {
+    const input = readInputs();
+    elements.strategyDescription.textContent = strategyDescriptions[elements.pacingStrategy.value];
+
+    if (input.error) {
+        elements.timeError.textContent = input.error;
+        return;
+    }
+
+    elements.timeError.textContent = '';
+    lastCalculatedResults = calculateResults(input);
+    const finish = lastCalculatedResults[lastCalculatedResults.length - 1];
+
+    elements.totalTime.textContent = formatDuration(input.targetTimeInHours);
+    elements.avgSpeed.textContent = (totalRaceDistance / input.targetTimeInHours).toFixed(2);
+    elements.finishTime.textContent = finish.timeOfDay;
+    elements.planSummary.textContent = `${formatDuration(input.targetTimeInHours)} target · ${elements.pacingStrategy.options[elements.pacingStrategy.selectedIndex].text}`;
+
+    renderTable(lastCalculatedResults);
+    renderMobileCards(lastCalculatedResults);
+    renderChart(lastCalculatedResults);
+    saveSettings();
+    updateAddressBar();
 }
-function formatTime(time) { return new Date(time * 3600 * 1000).toISOString().slice(11, 19); }
-function formatTimeOfDay(date) { return date.toTimeString().slice(0, 8); }
-function updateSummary() {
-    const hr = parseInt(elements.targetHrInput.value) || 0;
-    const min = parseInt(elements.targetMinInput.value) || 0;
-    elements.totalTimeSpan.textContent = `Total Time: ${hr}:${String(min).padStart(2, '0')}:00`;
+
+function syncSliderFromTime() {
+    const hours = Number.parseInt(elements.targetHr.value, 10) || 0;
+    const minutes = Number.parseInt(elements.targetMin.value, 10) || 0;
+    elements.targetTimeSlider.value = String(clamp((hours * 60) + minutes, 120, 480));
 }
-function syncInputs(source, target) { target.value = source.value; }
-function setInitialTheme() {
-    const savedTheme = localStorage.getItem('theme') || 'dark';
-    elements.body.setAttribute('data-theme', savedTheme);
-    elements.themeToggle.checked = savedTheme === 'light';
+
+function syncTimeFromSlider() {
+    const totalMinutes = Number.parseInt(elements.targetTimeSlider.value, 10);
+    elements.targetHr.value = String(Math.floor(totalMinutes / 60));
+    elements.targetMin.value = String(totalMinutes % 60);
 }
-function toggleTheme() {
-    const newTheme = elements.themeToggle.checked ? 'light' : 'dark';
-    elements.body.setAttribute('data-theme', newTheme);
-    localStorage.setItem('theme', newTheme);
-    if (lastCalculatedResults) { // Use module-scoped variable
-        renderChart(lastCalculatedResults);
+
+function currentQuery() {
+    const params = new URLSearchParams();
+    params.set('h', elements.targetHr.value);
+    params.set('m', elements.targetMin.value);
+    params.set('start', elements.startTime.value);
+    params.set('strategy', elements.pacingStrategy.value);
+    return params;
+}
+
+function updateAddressBar() {
+    const url = new URL(window.location.href);
+    url.search = currentQuery().toString();
+    window.history.replaceState({}, '', url);
+}
+
+async function copyShareLink() {
+    updateAddressBar();
+    try {
+        await navigator.clipboard.writeText(window.location.href);
+        showStatus('Share link copied.');
+    } catch (error) {
+        const temporaryInput = document.createElement('input');
+        temporaryInput.value = window.location.href;
+        document.body.appendChild(temporaryInput);
+        temporaryInput.select();
+        document.execCommand('copy');
+        temporaryInput.remove();
+        showStatus('Share link copied.');
     }
 }
 
-// --- CSV Export ---
 function exportToCSV() {
-    if (!lastCalculatedResults) { return; } // Use module-scoped variable
-    let csvContent = "Point on Route,Dist (km),Total Dist (km),Time to Point,Time of Day,Split Time,Speed on Split (km/h),Moving Average Speed (km/h)\n";
-    lastCalculatedResults.forEach(row => { // Use module-scoped variable
-        csvContent += `"${row.name}",${row.dist},${row.totalDist},${row.timeToPoint},${row.timeOfDay},${row.splitTime},${row.speedOnSplit},${row.movingAvgSpeed}\n`;
-    });
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Amashova_Splits_${elements.targetHrInput.value}h${elements.targetMinInput.value}m.csv`);
+    if (!lastCalculatedResults.length) return;
+
+    const header = ['Checkpoint', 'Segment km', 'Total km', 'Arrival', 'Elapsed', 'Split', 'Split speed km/h', 'Moving average km/h'];
+    const rows = lastCalculatedResults.map((row) => [
+        row.name, row.dist, row.totalDist, row.timeOfDay, row.timeToPoint,
+        row.splitTime, row.speedOnSplit, row.movingAvgSpeed
+    ]);
+    const csv = [header, ...rows].map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Amashova_Pacing_${elements.targetHr.value}h${String(elements.targetMin.value).padStart(2, '0')}.csv`;
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+    link.remove();
+    showStatus('CSV exported.');
 }
 
-// --- User Settings Persistence ---
-function saveUserSettings() {
+function showStatus(message) {
+    elements.actionStatus.textContent = message;
+    window.clearTimeout(showStatus.timeout);
+    showStatus.timeout = window.setTimeout(() => {
+        elements.actionStatus.textContent = '';
+    }, 3000);
+}
+
+function saveSettings() {
     const settings = {
-        targetHr: elements.targetHrInput.value,
-        targetMin: elements.targetMinInput.value,
-        startTime: elements.startTimeInput.value, // Changed from startHr and startMin
-        pacingStrategy: elements.pacingStrategyInput.value,
+        h: elements.targetHr.value,
+        m: elements.targetMin.value,
+        start: elements.startTime.value,
+        strategy: elements.pacingStrategy.value
     };
-    localStorage.setItem('userSettings', JSON.stringify(settings));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
 }
 
-function loadUserSettings() {
-    const savedSettings = localStorage.getItem('userSettings');
-    if (savedSettings) {
-        const settings = JSON.parse(savedSettings);
-        elements.targetHrInput.value = settings.targetHr || '2';
-        elements.targetMinInput.value = settings.targetMin || '30';
-        elements.startTimeInput.value = settings.startTime || '06:00'; // Changed
-        elements.pacingStrategyInput.value = settings.pacingStrategy || 'even';
-
-        // Sync sliders after loading values into text inputs
-        syncInputs(elements.targetHrInput, elements.targetHrSlider);
-        syncInputs(elements.targetMinInput, elements.targetMinSlider);
-    }
+function applySettings(settings) {
+    if (!settings) return;
+    elements.targetHr.value = settings.h || '4';
+    elements.targetMin.value = settings.m || '0';
+    elements.startTime.value = settings.start || '06:00';
+    elements.pacingStrategy.value = pacingStrategies[settings.strategy] ? settings.strategy : 'even';
 }
 
-// --- Event Listeners Setup ---
-function addEventListeners() {
-    const liveInputs = [elements.targetHrInput, elements.targetMinInput, elements.targetHrSlider, elements.targetMinSlider, elements.startTimeInput, elements.pacingStrategyInput]; // Updated list
+function loadInitialSettings() {
+    const params = new URLSearchParams(window.location.search);
+    const hasQuerySettings = ['h', 'm', 'start', 'strategy'].some((key) => params.has(key));
 
-    function handleLiveInput() {
-        if (elements.calculatingIndicator) elements.calculatingIndicator.style.display = 'block';
-
-        // Use a short timeout to allow the indicator to render before potentially blocking operations
-        setTimeout(() => {
-            updateSummary();
-            calculateSplits(); // This function now contains the logic to hide the indicator
-            saveUserSettings();
-        }, 10); // 10ms delay
+    if (hasQuerySettings) {
+        applySettings({
+            h: params.get('h'),
+            m: params.get('m'),
+            start: params.get('start'),
+            strategy: params.get('strategy')
+        });
+    } else {
+        try {
+            applySettings(JSON.parse(localStorage.getItem(STORAGE_KEY)));
+        } catch (error) {
+            localStorage.removeItem(STORAGE_KEY);
+        }
     }
 
-    const debouncedHandler = debounce(handleLiveInput, 250);
+    syncSliderFromTime();
+}
 
-    // Attach the main debounced handler to all live inputs (including sliders)
-    liveInputs.forEach(input => input.addEventListener('input', debouncedHandler));
+function applyTheme(theme) {
+    elements.body.dataset.theme = theme;
+    elements.themeToggle.setAttribute('aria-label', theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
+    localStorage.setItem('amashovaTheme', theme);
+    if (lastCalculatedResults.length) renderChart(lastCalculatedResults);
+}
 
-    // Separate listeners JUST for syncing the visual state of paired inputs (text <-> slider)
-    // These do NOT need to trigger calculations, as the debouncedHandler above will take care of it
-    // when the input's value actually changes.
-    elements.targetHrInput.addEventListener('input', () => {
-        syncInputs(elements.targetHrInput, elements.targetHrSlider);
-    });
-    elements.targetHrSlider.addEventListener('input', () => {
-        syncInputs(elements.targetHrSlider, elements.targetHrInput);
-    });
-    elements.targetMinInput.addEventListener('input', () => {
-        syncInputs(elements.targetMinInput, elements.targetMinSlider);
-    });
-    elements.targetMinSlider.addEventListener('input', () => {
-        syncInputs(elements.targetMinSlider, elements.targetMinInput);
+function debounce(callback, delay = 120) {
+    let timer;
+    return (...args) => {
+        window.clearTimeout(timer);
+        timer = window.setTimeout(() => callback(...args), delay);
+    };
+}
+
+function bindEvents() {
+    const debouncedUpdate = debounce(updatePlan);
+
+    [elements.targetHr, elements.targetMin, elements.startTime].forEach((input) => {
+        input.addEventListener('input', () => {
+            syncSliderFromTime();
+            debouncedUpdate();
+        });
     });
 
+    elements.targetTimeSlider.addEventListener('input', () => {
+        syncTimeFromSlider();
+        debouncedUpdate();
+    });
+    elements.pacingStrategy.addEventListener('change', updatePlan);
+    elements.shareButton.addEventListener('click', copyShareLink);
+    elements.printButton.addEventListener('click', () => window.print());
     elements.exportButton.addEventListener('click', exportToCSV);
-    elements.themeToggle.addEventListener('change', toggleTheme);
+    elements.themeToggle.addEventListener('click', () => {
+        applyTheme(elements.body.dataset.theme === 'dark' ? 'light' : 'dark');
+    });
 }
 
-// --- Initialization ---
-document.addEventListener('DOMContentLoaded', () => {
-    setInitialTheme(); // Theme first
-    loadUserSettings(); // Load user settings before first calculation
-    addEventListeners();
+function init() {
+    applyTheme(localStorage.getItem('amashovaTheme') || 'dark');
+    loadInitialSettings();
+    bindEvents();
+    updatePlan();
+}
 
-    // Populate pacing strategy tooltip content
-    const pacingTooltip = document.getElementById('pacingTooltip');
-    if (pacingTooltip) {
-        pacingTooltip.innerHTML = `
-            <strong>Even Pace:</strong> Attempts to maintain a consistent effort relative to terrain difficulty across all segments.<br><br>
-            <strong>Conservative Start:</strong> Starts easier than your average pace and aims to finish stronger. Good for avoiding 'bonking' and preserving energy for the later stages.<br><br>
-            <strong>Aggressive Start:</strong> Begins faster than your average pace. A high-risk, high-reward strategy that suits experienced riders aiming for a fast time, but requires careful energy management.
-        `;
-    }
-
-    updateSummary(); // Update summary based on loaded/default values
-    calculateSplits(); // Perform initial calculation
-});
+init();
