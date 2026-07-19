@@ -19,6 +19,10 @@ const elements = {
     printButton: document.getElementById('printButton'),
     exportButton: document.getElementById('exportButton'),
     actionStatus: document.getElementById('actionStatus'),
+    carbTarget: document.getElementById('carbTarget'),
+    drinkInterval: document.getElementById('drinkInterval'),
+    sodiumReminders: document.getElementById('sodiumReminders'),
+    riderNotes: document.getElementById('riderNotes'),
     themeToggle: document.getElementById('themeToggle'),
     body: document.body
 };
@@ -26,15 +30,47 @@ const elements = {
 let paceChart = null;
 let lastCalculatedResults = [];
 
+// Race configuration. Calculations and every print template read from this
+// object only, so a different race can be loaded by swapping the config
+// (e.g. built from GPX or a race data file) without touching the templates.
 // Calculation inputs intentionally retained from the previous live version.
-const segments = [
-    { name: 'WT1 Thornville', dist: 24.5, totalDist: 24.5 },
-    { name: 'WT2 Cato Ridge', dist: 17.3, totalDist: 41.8 },
-    { name: 'WT3 Wall of Fame', dist: 13.5, totalDist: 55.3 },
-    { name: 'Gilletts Station', dist: 19.2, totalDist: 74.5 },
-    { name: '45th Cutting', dist: 19.2, totalDist: 93.7 },
-    { name: 'Finish Suncoast', dist: 12.3, totalDist: 106.0 }
-];
+const raceConfig = {
+    id: 'amashova-classic-106',
+    name: 'Amashova Durban Classic',
+    shortName: 'AMASHOVA 106',
+    edition: 'October 2026',
+    distanceKm: 106.0,
+    startLocation: 'Pietermaritzburg',
+    finishLocation: 'Suncoast, Durban',
+    checkpoints: [
+        { name: 'WT1 Thornville', shortName: 'Thornville', dist: 24.5, totalDist: 24.5, note: 'Rolling start on the drags out of PMB. Settle in, do not surge.' },
+        { name: 'WT2 Cato Ridge', shortName: 'Cato Ridge', dist: 17.3, totalDist: 41.8, note: 'Steady rolling terrain. Fuel and drink early, before you need it.' },
+        { name: 'WT3 Wall of Fame', shortName: 'Wall of Fame', dist: 13.5, totalDist: 55.3, note: 'Inchanga sits in this stretch. Hold your own pace on the climb.' },
+        { name: 'Gilletts Station', shortName: 'Gilletts', dist: 19.2, totalDist: 74.5, note: 'Botha’s Hill then fast descending. Stay alert in the bunch.' },
+        { name: '45th Cutting', shortName: '45th Cutting', dist: 19.2, totalDist: 93.7, note: 'Long downhill run towards town. Recover, but keep eating.' },
+        { name: 'Finish Suncoast', shortName: 'Finish', dist: 12.3, totalDist: 106.0, note: 'Flat run-in along the beachfront. Empty the tank safely.' }
+    ],
+    // Approximate locations of the marked climbs, used on the top tube strip
+    // and the elevation profile.
+    climbs: [
+        { name: 'Ashburton drag', km: 10 },
+        { name: 'Inchanga', km: 46 },
+        { name: 'Botha’s Hill', km: 58 },
+        { name: '45th Cutting', km: 92 }
+    ],
+    // Indicative elevation profile (metres) for the print templates.
+    elevation: [
+        { km: 0, ele: 650 }, { km: 5, ele: 690 }, { km: 10, ele: 760 }, { km: 15, ele: 780 },
+        { km: 20, ele: 730 }, { km: 24.5, ele: 710 }, { km: 30, ele: 690 }, { km: 35, ele: 660 },
+        { km: 41.8, ele: 720 }, { km: 46, ele: 770 }, { km: 50, ele: 700 }, { km: 55.3, ele: 620 },
+        { km: 58, ele: 720 }, { km: 62, ele: 680 }, { km: 66, ele: 620 }, { km: 70, ele: 580 },
+        { km: 74.5, ele: 520 }, { km: 80, ele: 420 }, { km: 85, ele: 330 }, { km: 90, ele: 180 },
+        { km: 93.7, ele: 110 }, { km: 98, ele: 40 }, { km: 102, ele: 15 }, { km: 106, ele: 5 }
+    ],
+    elevationNote: 'Indicative profile — confirm against official route data before race day.'
+};
+
+const segments = raceConfig.checkpoints;
 
 const pacingStrategies = {
     even: [1.1577, 1.0815, 1.0915, 0.9512, 0.7948, 0.8830],
@@ -48,8 +84,9 @@ const strategyDescriptions = {
     aggressive: 'Front-loads effort. Higher risk and better suited to experienced riders.'
 };
 
-const totalRaceDistance = 106.0;
+const totalRaceDistance = raceConfig.distanceKm;
 const STORAGE_KEY = 'amashovaPacingSettingsV2';
+let lastInput = null;
 
 function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);
@@ -95,6 +132,12 @@ function calculateResults(input) {
 
         return {
             name: segment.name,
+            shortName: segment.shortName || segment.name,
+            note: segment.note || '',
+            km: segment.totalDist,
+            segmentKm: segment.dist,
+            cumHours: cumulativeTimeInHours,
+            splitHours,
             dist: segment.dist.toFixed(1),
             totalDist: segment.totalDist.toFixed(1),
             timeToPoint: formatDuration(cumulativeTimeInHours),
@@ -228,6 +271,7 @@ function updatePlan() {
     }
 
     elements.timeError.textContent = '';
+    lastInput = input;
     lastCalculatedResults = calculateResults(input);
     const finish = lastCalculatedResults[lastCalculatedResults.length - 1];
 
@@ -261,6 +305,10 @@ function currentQuery() {
     params.set('m', elements.targetMin.value);
     params.set('start', elements.startTime.value);
     params.set('strategy', elements.pacingStrategy.value);
+    params.set('carbs', elements.carbTarget.value);
+    params.set('drink', elements.drinkInterval.value);
+    if (elements.sodiumReminders.checked) params.set('sodium', '1');
+    if (elements.riderNotes.value.trim()) params.set('notes', elements.riderNotes.value.trim());
     return params;
 }
 
@@ -321,7 +369,11 @@ function saveSettings() {
         h: elements.targetHr.value,
         m: elements.targetMin.value,
         start: elements.startTime.value,
-        strategy: elements.pacingStrategy.value
+        strategy: elements.pacingStrategy.value,
+        carbs: elements.carbTarget.value,
+        drink: elements.drinkInterval.value,
+        sodium: elements.sodiumReminders.checked ? '1' : '',
+        notes: elements.riderNotes.value
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
 }
@@ -332,6 +384,10 @@ function applySettings(settings) {
     elements.targetMin.value = settings.m || '0';
     elements.startTime.value = settings.start || '06:00';
     elements.pacingStrategy.value = pacingStrategies[settings.strategy] ? settings.strategy : 'even';
+    if (['40', '60', '90'].includes(settings.carbs)) elements.carbTarget.value = settings.carbs;
+    if (['10', '15', '20'].includes(settings.drink)) elements.drinkInterval.value = settings.drink;
+    elements.sodiumReminders.checked = settings.sodium === '1';
+    if (typeof settings.notes === 'string') elements.riderNotes.value = settings.notes.slice(0, 280);
 }
 
 function loadInitialSettings() {
@@ -343,7 +399,11 @@ function loadInitialSettings() {
             h: params.get('h'),
             m: params.get('m'),
             start: params.get('start'),
-            strategy: params.get('strategy')
+            strategy: params.get('strategy'),
+            carbs: params.get('carbs'),
+            drink: params.get('drink'),
+            sodium: params.get('sodium'),
+            notes: params.get('notes') || ''
         });
     } else {
         try {
@@ -386,19 +446,74 @@ function bindEvents() {
         debouncedUpdate();
     });
     elements.pacingStrategy.addEventListener('change', updatePlan);
+
+    [elements.carbTarget, elements.drinkInterval].forEach((input) => {
+        input.addEventListener('change', () => {
+            saveSettings();
+            updateAddressBar();
+        });
+    });
+    elements.sodiumReminders.addEventListener('change', () => {
+        saveSettings();
+        updateAddressBar();
+    });
+    elements.riderNotes.addEventListener('input', debounce(() => {
+        saveSettings();
+        updateAddressBar();
+    }, 250));
+
     elements.shareButton.addEventListener('click', copyShareLink);
-    elements.printButton.addEventListener('click', () => window.print());
+    elements.printButton.addEventListener('click', () => {
+        if (window.PrintKit) {
+            window.PrintKit.open();
+        } else {
+            window.print();
+        }
+    });
     elements.exportButton.addEventListener('click', exportToCSV);
     elements.themeToggle.addEventListener('click', () => {
         applyTheme(elements.body.dataset.theme === 'dark' ? 'light' : 'dark');
     });
 }
 
+// Snapshot of the current plan for the print module. Returns null while the
+// inputs are invalid. Everything the print templates need lives on this
+// object, keeping them independent of the app's DOM and of any specific race.
+window.getPlanData = function getPlanData() {
+    if (!lastInput || !lastCalculatedResults.length) return null;
+    const finish = lastCalculatedResults[lastCalculatedResults.length - 1];
+    const strategySelect = elements.pacingStrategy;
+    return {
+        race: raceConfig,
+        input: { ...lastInput },
+        results: lastCalculatedResults.map((row) => ({ ...row })),
+        summary: {
+            targetTime: formatDuration(lastInput.targetTimeInHours),
+            targetShort: `${lastInput.hours}:${String(lastInput.minutes).padStart(2, '0')}`,
+            avgSpeed: (totalRaceDistance / lastInput.targetTimeInHours).toFixed(1),
+            startClock: `${String(lastInput.startHour).padStart(2, '0')}:${String(lastInput.startMinute).padStart(2, '0')}`,
+            finishClock: finish.timeOfDay,
+            strategyLabel: strategySelect.options[strategySelect.selectedIndex].text
+        },
+        fuel: {
+            carbTarget: Number.parseInt(elements.carbTarget.value, 10),
+            drinkInterval: Number.parseInt(elements.drinkInterval.value, 10),
+            sodium: elements.sodiumReminders.checked
+        },
+        notes: elements.riderNotes.value
+            .split('\n')
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .slice(0, 6)
+    };
+};
+
 function init() {
     applyTheme(localStorage.getItem('amashovaTheme') || 'dark');
     loadInitialSettings();
     bindEvents();
     updatePlan();
+    if (window.PrintKit) window.PrintKit.init();
 }
 
 init();

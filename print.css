@@ -1,0 +1,352 @@
+/* ==========================================================================
+   PrintKit — race-ready print templates
+   Shared by the on-screen preview dialog and the actual print job.
+   All templates are monochrome, high-contrast and sized in millimetres.
+   ========================================================================== */
+
+.print-root { display: none; }
+
+/* --------------------------------------------------------------------------
+   A4 sheets
+   -------------------------------------------------------------------------- */
+.print-page {
+    width: 210mm;
+    min-height: 296mm;
+    padding: 10mm 12mm;
+    box-sizing: border-box;
+    background: #fff;
+    color: #111;
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.35;
+}
+
+/* --------------------------------------------------------------------------
+   Cards sheet (stem card + top tube strip with cut lines)
+   -------------------------------------------------------------------------- */
+.cards-head {
+    margin-bottom: 8mm;
+    padding-bottom: 3mm;
+    border-bottom: 0.6mm solid #111;
+    font-size: 9pt;
+    color: #333;
+}
+.cards-head strong { color: #111; }
+.cards-area { display: flex; gap: 14mm; align-items: flex-start; }
+.cut-stack { display: flex; flex-direction: column; gap: 2mm; }
+.cut-box {
+    border: 0.35mm dashed #999;
+    padding: 1.5mm;
+    width: fit-content;
+}
+.cut-label {
+    margin-bottom: 5mm;
+    font-size: 7pt;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #555;
+}
+
+/* Stem card — 90 × 60 mm ------------------------------------------------- */
+.stem-card {
+    width: 90mm;
+    height: 60mm;
+    box-sizing: border-box;
+    padding: 2.5mm 3mm;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    color: #000;
+}
+.stem-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 0.6mm solid #000;
+    padding-bottom: 1mm;
+}
+.stem-race { font-size: 8.5pt; font-weight: 800; letter-spacing: 0.08em; }
+.stem-target { font-size: 16pt; font-weight: 800; letter-spacing: -0.02em; }
+.stem-sub {
+    margin-top: 1mm;
+    font-size: 6.5pt;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #222;
+}
+.stem-rows { flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; margin-top: 1mm; }
+.stem-row {
+    display: flex;
+    align-items: baseline;
+    gap: 2mm;
+    font-size: 9pt;
+    line-height: 1.15;
+}
+.stem-row.is-finish { font-weight: 800; }
+.stem-km { width: 8mm; font-weight: 800; font-variant-numeric: tabular-nums; }
+.stem-name {
+    flex: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-weight: 600;
+    font-size: 8pt;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+.stem-eta { font-size: 11pt; font-weight: 800; font-variant-numeric: tabular-nums; }
+.stem-fuel {
+    margin-top: 1mm;
+    padding: 1.2mm 2mm;
+    background: #000;
+    color: #fff;
+    font-size: 7.5pt;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-align: center;
+    border-radius: 1mm;
+}
+.stem-notes { margin-top: 1mm; }
+.stem-note {
+    font-size: 7pt;
+    font-weight: 700;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* Top tube strip — 220 × 40 mm ------------------------------------------- */
+.tube-strip {
+    width: 220mm;
+    height: 40mm;
+    box-sizing: border-box;
+    padding: 1.5mm 3mm;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    color: #000;
+}
+.tube-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 3mm;
+    border-bottom: 0.5mm solid #000;
+    padding-bottom: 0.8mm;
+    font-variant-numeric: tabular-nums;
+}
+.tube-race { font-size: 8pt; font-weight: 800; letter-spacing: 0.08em; }
+.tube-target { font-size: 6.5pt; font-weight: 700; letter-spacing: 0.05em; color: #222; }
+.tube-finish { font-size: 9pt; font-weight: 800; }
+.tube-track { position: relative; flex: 1; margin: 1mm 6mm 0; }
+.tube-climbs { position: relative; height: 6mm; }
+.tube-climb {
+    position: absolute;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: baseline;
+    gap: 0.8mm;
+    font-size: 6.5pt;
+    font-weight: 800;
+    white-space: nowrap;
+}
+.tube-climb em { font-style: normal; font-size: 5.5pt; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+.tube-bar {
+    position: relative;
+    height: 4mm;
+    background: #000;
+    border-radius: 1mm;
+}
+.tube-fuel-mark {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 3.4mm;
+    height: 3.4mm;
+    border-radius: 50%;
+    background: #fff;
+    color: #000;
+    border: 0.4mm solid #000;
+    font-size: 5.5pt;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+.tube-sodium { background: #000; color: #fff; border-color: #fff; }
+.tube-cps { position: relative; height: 11mm; margin-top: 0.8mm; }
+.tube-cp {
+    position: absolute;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.12;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.tube-cp.is-start { transform: translateX(-15%); align-items: flex-start; }
+.tube-cp.is-finish { transform: translateX(-85%); align-items: flex-end; }
+.tube-cp::before {
+    content: "";
+    width: 0.5mm;
+    height: 1.6mm;
+    background: #000;
+    margin-bottom: 0.4mm;
+}
+.tube-cp.is-start::before, .tube-cp.is-finish::before { align-self: center; }
+.tube-cp-km { font-size: 6pt; font-weight: 800; }
+.tube-cp-eta { font-size: 8.5pt; font-weight: 800; }
+.tube-cp-name { font-size: 5.5pt; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: #222; }
+.tube-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 4mm;
+    font-size: 6pt;
+    font-weight: 700;
+    color: #222;
+}
+.tube-notes {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-weight: 800;
+    color: #000;
+}
+
+/* Rotated placement on the A4 portrait cards sheet */
+.tube-box { width: 40mm; height: 220mm; overflow: hidden; }
+.tube-rotor {
+    width: 220mm;
+    height: 40mm;
+    transform: rotate(90deg) translateY(-40mm);
+    transform-origin: top left;
+}
+
+/* --------------------------------------------------------------------------
+   Full race plan (A4, 2 pages)
+   -------------------------------------------------------------------------- */
+.plan-page { font-size: 9pt; color: #1a1a1a; }
+.plan-page h2 {
+    margin: 5mm 0 2mm;
+    font-size: 10.5pt;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    border-bottom: 0.4mm solid #111;
+    padding-bottom: 1mm;
+    color: #000;
+}
+.plan-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8mm;
+    border-bottom: 0.8mm solid #000;
+    padding-bottom: 3mm;
+}
+.plan-kicker { margin: 0 0 1mm; font-size: 7.5pt; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #444; }
+.plan-header h1 { margin: 0 0 1mm; font-size: 20pt; letter-spacing: -0.02em; color: #000; }
+.plan-subtitle { margin: 0; font-size: 9pt; color: #444; }
+.plan-target-box {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5mm;
+    padding: 2mm 3mm;
+    border: 0.5mm solid #000;
+    border-radius: 2mm;
+    white-space: nowrap;
+}
+.plan-target-box span { font-size: 7pt; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #444; }
+.plan-target-box strong { font-size: 18pt; font-weight: 800; color: #000; }
+.plan-inputs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2mm; }
+.plan-input {
+    border: 0.3mm solid #bbb;
+    border-radius: 1.5mm;
+    padding: 1.5mm 2.5mm;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5mm;
+}
+.plan-input span { font-size: 6.5pt; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: #555; }
+.plan-input strong { font-size: 10pt; color: #000; }
+.plan-table { width: 100%; min-width: 0; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.plan-table th, .plan-table td { padding: 1.6mm 2mm; border-bottom: 0.25mm solid #ccc; text-align: left; white-space: normal; background: transparent; }
+.plan-table th { font-size: 6.8pt; letter-spacing: 0.06em; text-transform: uppercase; color: #333; border-bottom: 0.45mm solid #111; }
+.plan-table td { font-size: 8.5pt; }
+.plan-table tbody tr:last-child td { font-weight: 800; }
+.fuel-table { column-gap: 4mm; }
+.fuel-table td { font-size: 8pt; padding: 1.1mm 2mm; }
+.fuel-sodium td { color: #000; font-weight: 700; }
+.plan-lead { margin: 0 0 2mm; font-size: 9pt; }
+.elev-svg { width: 100%; height: auto; margin-top: 1mm; }
+.elev-area { fill: #e6e6e6; }
+.elev-line { fill: none; stroke: #000; stroke-width: 2.5; }
+.elev-cp-line { stroke: #999; stroke-width: 1; stroke-dasharray: 4 4; }
+.elev-cp-km, .elev-cp-eta, .elev-climb, .elev-axis { font-family: inherit; }
+.elev-cp-km { font-size: 13px; font-weight: 800; text-anchor: middle; fill: #000; }
+.elev-cp-eta { font-size: 11px; font-weight: 600; text-anchor: middle; fill: #444; }
+.elev-climb { font-size: 12px; font-weight: 800; text-anchor: middle; fill: #000; }
+.elev-axis { font-size: 11px; fill: #666; }
+.plan-footnote { margin: 1mm 0 0; font-size: 7pt; color: #666; }
+.seg-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.5mm; }
+.seg-card { border: 0.3mm solid #bbb; border-radius: 1.5mm; padding: 2mm 2.5mm; }
+.seg-top { display: flex; align-items: baseline; gap: 1.5mm; margin-bottom: 1mm; }
+.seg-index { font-size: 7pt; font-weight: 800; color: #666; }
+.seg-top strong { font-size: 9pt; }
+.seg-range { margin-left: auto; font-size: 7pt; color: #555; font-variant-numeric: tabular-nums; }
+.seg-metrics { display: flex; gap: 3mm; font-variant-numeric: tabular-nums; }
+.seg-metrics span { display: flex; flex-direction: column; font-size: 8.5pt; font-weight: 700; }
+.seg-metrics em { font-style: normal; font-size: 6pt; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: #666; }
+.seg-note { margin: 1.2mm 0 0; font-size: 7.2pt; color: #333; line-height: 1.3; }
+.plan-notes { margin: 0; padding-left: 5mm; }
+.plan-notes li { font-size: 9.5pt; font-weight: 700; margin-bottom: 1mm; }
+.plan-notes-empty li { list-style: none; border-bottom: 0.3mm solid #bbb; height: 6mm; }
+.plan-footer {
+    margin-top: 5mm;
+    padding-top: 2mm;
+    border-top: 0.3mm solid #bbb;
+    display: flex;
+    justify-content: space-between;
+    gap: 6mm;
+    font-size: 6.8pt;
+    color: #666;
+}
+
+/* --------------------------------------------------------------------------
+   Preview dialog scaling
+   -------------------------------------------------------------------------- */
+.print-preview {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface-soft);
+    padding: 12px;
+    overflow: auto;
+    max-height: min(52vh, 520px);
+}
+.preview-clip { overflow: hidden; }
+.preview-scale { width: fit-content; }
+.preview-scale .print-page {
+    margin-bottom: 10px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+    border-radius: 2px;
+}
+.preview-empty { margin: 0; color: var(--text-muted); font-size: 0.9rem; }
+
+/* --------------------------------------------------------------------------
+   Print rules
+   -------------------------------------------------------------------------- */
+@page { size: A4; margin: 0; }
+
+@media print {
+    body > *:not(.print-root) { display: none !important; }
+    .print-root { display: block !important; }
+    html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
+    .print-page { page-break-after: always; }
+    .print-root .print-page:last-child { page-break-after: auto; }
+    .stem-fuel, .tube-bar, .tube-sodium, .elev-area {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
