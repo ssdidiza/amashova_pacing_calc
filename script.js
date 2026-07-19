@@ -164,7 +164,7 @@ function renderChart(results) {
     if (typeof Chart === 'undefined') return;
     if (paceChart) paceChart.destroy();
 
-    const styles = getComputedStyle(document.documentElement);
+    const styles = getComputedStyle(elements.body);
     const textColor = styles.getPropertyValue('--text-muted').trim();
     const gridColor = styles.getPropertyValue('--border').trim();
     const accent = styles.getPropertyValue('--accent').trim();
@@ -203,12 +203,27 @@ function renderChart(results) {
     });
 }
 
+function clearResults() {
+    lastCalculatedResults = [];
+    elements.resultsTableBody.replaceChildren();
+    elements.mobileResults.replaceChildren();
+    if (paceChart) {
+        paceChart.destroy();
+        paceChart = null;
+    }
+    elements.totalTime.textContent = '--:--:--';
+    elements.avgSpeed.textContent = '0.00';
+    elements.finishTime.textContent = '--:--';
+    elements.planSummary.textContent = '';
+}
+
 function updatePlan() {
     const input = readInputs();
     elements.strategyDescription.textContent = strategyDescriptions[elements.pacingStrategy.value];
 
     if (input.error) {
         elements.timeError.textContent = input.error;
+        clearResults();
         return;
     }
 
@@ -286,8 +301,10 @@ function exportToCSV() {
     link.download = `Amashova_Pacing_${elements.targetHr.value}h${String(elements.targetMin.value).padStart(2, '0')}.csv`;
     document.body.appendChild(link);
     link.click();
-    URL.revokeObjectURL(link.href);
-    link.remove();
+    window.setTimeout(() => {
+        URL.revokeObjectURL(link.href);
+        link.remove();
+    }, 100);
     showStatus('CSV exported.');
 }
 
