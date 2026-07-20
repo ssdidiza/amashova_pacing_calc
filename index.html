@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Plan your Amashova Durban Classic target time, checkpoint arrivals and segment pacing.">
+    <meta name="description" content="Free race pacing calculator for the Amashova Durban Classic and Ride Joburg 2026 — checkpoint arrival times, fuel strategy and printable race cards.">
     <meta name="theme-color" content="#0b1220">
     <title>Amashova Pacing Calculator</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,6 +12,8 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="print.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
+    <script src="races/amashova-106.js" defer></script>
+    <script src="races/ridejoburg-97-2026.js" defer></script>
     <script src="print.js" defer></script>
     <script src="script.js" defer></script>
 </head>
@@ -24,10 +26,15 @@
         <header class="hero">
             <div class="eyebrow-row">
                 <span class="eyebrow">Race-day planning tool</span>
-                <span class="version">Version 2.0 · July 2026</span>
+                <span class="version">Version 2.1 · July 2026</span>
             </div>
-            <h1>Amashova Durban Classic</h1>
-            <p class="hero-copy">Build a clear 106 km pacing plan with target checkpoint arrival times and segment speed guidance.</p>
+            <label class="race-picker" for="raceSelect">
+                <span>Race</span>
+                <select id="raceSelect"></select>
+            </label>
+            <h1 id="raceTitle">Amashova Durban Classic</h1>
+            <p id="raceTagline" class="hero-copy">Build a clear 106 km pacing plan with target checkpoint arrival times and segment speed guidance.</p>
+            <p id="raceNotice" class="race-notice" hidden></p>
             <p class="creator">Created by <a href="https://www.strava.com/athletes/26187606" target="_blank" rel="noopener noreferrer">Spera Didiza</a></p>
         </header>
 
@@ -188,7 +195,7 @@
         </section>
 
         <footer>
-            <p>Amashova Pacing Calculator · Free community tool</p>
+            <p>Race pacing calculator · Free community tool</p>
         </footer>
     </main>
 

@@ -23,6 +23,10 @@ const elements = {
     drinkInterval: document.getElementById('drinkInterval'),
     sodiumReminders: document.getElementById('sodiumReminders'),
     riderNotes: document.getElementById('riderNotes'),
+    raceSelect: document.getElementById('raceSelect'),
+    raceTitle: document.getElementById('raceTitle'),
+    raceTagline: document.getElementById('raceTagline'),
+    raceNotice: document.getElementById('raceNotice'),
     themeToggle: document.getElementById('themeToggle'),
     body: document.body
 };
@@ -30,61 +34,19 @@ const elements = {
 let paceChart = null;
 let lastCalculatedResults = [];
 
-// Race configuration. Calculations and every print template read from this
-// object only, so a different race can be loaded by swapping the config
-// (e.g. built from GPX or a race data file) without touching the templates.
-// Calculation inputs intentionally retained from the previous live version.
-const raceConfig = {
-    id: 'amashova-classic-106',
-    name: 'Amashova Durban Classic',
-    shortName: 'AMASHOVA 106',
-    edition: 'October 2026',
-    distanceKm: 106.0,
-    startLocation: 'Pietermaritzburg',
-    finishLocation: 'Suncoast, Durban',
-    checkpoints: [
-        { name: 'WT1 Thornville', shortName: 'Thornville', dist: 24.5, totalDist: 24.5, note: 'Rolling start on the drags out of PMB. Settle in, do not surge.' },
-        { name: 'WT2 Cato Ridge', shortName: 'Cato Ridge', dist: 17.3, totalDist: 41.8, note: 'Steady rolling terrain. Fuel and drink early, before you need it.' },
-        { name: 'WT3 Wall of Fame', shortName: 'Wall of Fame', dist: 13.5, totalDist: 55.3, note: 'Inchanga sits in this stretch. Hold your own pace on the climb.' },
-        { name: 'Gilletts Station', shortName: 'Gilletts', dist: 19.2, totalDist: 74.5, note: 'Botha’s Hill then fast descending. Stay alert in the bunch.' },
-        { name: '45th Cutting', shortName: '45th Cutting', dist: 19.2, totalDist: 93.7, note: 'Long downhill run towards town. Recover, but keep eating.' },
-        { name: 'Finish Suncoast', shortName: 'Finish', dist: 12.3, totalDist: 106.0, note: 'Flat run-in along the beachfront. Empty the tank safely.' }
-    ],
-    // Approximate locations of the marked climbs, used on the top tube strip
-    // and the elevation profile.
-    climbs: [
-        { name: 'Ashburton drag', km: 10 },
-        { name: 'Inchanga', km: 46 },
-        { name: 'Botha’s Hill', km: 58 },
-        { name: '45th Cutting', km: 92 }
-    ],
-    // Indicative elevation profile (metres) for the print templates.
-    elevation: [
-        { km: 0, ele: 650 }, { km: 5, ele: 690 }, { km: 10, ele: 760 }, { km: 15, ele: 780 },
-        { km: 20, ele: 730 }, { km: 24.5, ele: 710 }, { km: 30, ele: 690 }, { km: 35, ele: 660 },
-        { km: 41.8, ele: 720 }, { km: 46, ele: 770 }, { km: 50, ele: 700 }, { km: 55.3, ele: 620 },
-        { km: 58, ele: 720 }, { km: 62, ele: 680 }, { km: 66, ele: 620 }, { km: 70, ele: 580 },
-        { km: 74.5, ele: 520 }, { km: 80, ele: 420 }, { km: 85, ele: 330 }, { km: 90, ele: 180 },
-        { km: 93.7, ele: 110 }, { km: 98, ele: 40 }, { km: 102, ele: 15 }, { km: 106, ele: 5 }
-    ],
-    elevationNote: 'Indicative profile — confirm against official route data before race day.'
-};
-
-const segments = raceConfig.checkpoints;
-
-const pacingStrategies = {
-    even: [1.1577, 1.0815, 1.0915, 0.9512, 0.7948, 0.8830],
-    conservative: [1.25, 1.10, 1.09, 0.94, 0.78, 0.80],
-    aggressive: [1.05, 1.06, 1.10, 0.96, 0.81, 0.98]
-};
+// Race registry. Each file in races/ registers a config on window.RACES;
+// the calculator and every print template read only from the active config,
+// so adding a race is a matter of adding a config (see tools/gpx-to-config.js).
+const RACES = window.RACES || {};
+const DEFAULT_RACE_ID = 'amashova-106';
+let raceConfig = RACES[DEFAULT_RACE_ID] || Object.values(RACES)[0];
 
 const strategyDescriptions = {
-    even: 'Balances effort against the route profile across all six segments.',
+    even: 'Balances effort against the route profile across every segment.',
     conservative: 'Starts more cautiously and preserves more effort for the second half.',
     aggressive: 'Front-loads effort. Higher risk and better suited to experienced riders.'
 };
 
-const totalRaceDistance = raceConfig.distanceKm;
 const STORAGE_KEY = 'amashovaPacingSettingsV2';
 let lastInput = null;
 
@@ -116,7 +78,8 @@ function readInputs() {
 }
 
 function calculateResults(input) {
-    const timeFactors = pacingStrategies[input.strategy];
+    const segments = raceConfig.checkpoints;
+    const timeFactors = raceConfig.strategies[input.strategy] || raceConfig.strategies.even;
     const proportionalContributions = segments.map((segment, index) => segment.dist * timeFactors[index]);
     const sumProportionalContributions = proportionalContributions.reduce((sum, value) => sum + value, 0);
     const startTime = new Date(2000, 0, 1, input.startHour, input.startMinute, 0, 0);
@@ -215,7 +178,7 @@ function renderChart(results) {
     paceChart = new Chart(elements.paceChart, {
         type: 'bar',
         data: {
-            labels: results.map((result) => result.name.replace('WT1 ', '').replace('WT2 ', '').replace('WT3 ', '')),
+            labels: results.map((result) => result.shortName),
             datasets: [{
                 data: results.map((result) => result.speedOnSplit),
                 backgroundColor: accent,
@@ -276,7 +239,7 @@ function updatePlan() {
     const finish = lastCalculatedResults[lastCalculatedResults.length - 1];
 
     elements.totalTime.textContent = formatDuration(input.targetTimeInHours);
-    elements.avgSpeed.textContent = (totalRaceDistance / input.targetTimeInHours).toFixed(2);
+    elements.avgSpeed.textContent = (raceConfig.distanceKm / input.targetTimeInHours).toFixed(2);
     elements.finishTime.textContent = finish.timeOfDay;
     elements.planSummary.textContent = `${formatDuration(input.targetTimeInHours)} target · ${elements.pacingStrategy.options[elements.pacingStrategy.selectedIndex].text}`;
 
@@ -301,6 +264,7 @@ function syncTimeFromSlider() {
 
 function currentQuery() {
     const params = new URLSearchParams();
+    params.set('race', raceConfig.id);
     params.set('h', elements.targetHr.value);
     params.set('m', elements.targetMin.value);
     params.set('start', elements.startTime.value);
@@ -346,7 +310,8 @@ function exportToCSV() {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `Amashova_Pacing_${elements.targetHr.value}h${String(elements.targetMin.value).padStart(2, '0')}.csv`;
+    const raceSlug = raceConfig.shortName.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '');
+    link.download = `${raceSlug}_Pacing_${elements.targetHr.value}h${String(elements.targetMin.value).padStart(2, '0')}.csv`;
     document.body.appendChild(link);
     link.click();
     window.setTimeout(() => {
@@ -366,6 +331,7 @@ function showStatus(message) {
 
 function saveSettings() {
     const settings = {
+        race: raceConfig.id,
         h: elements.targetHr.value,
         m: elements.targetMin.value,
         start: elements.startTime.value,
@@ -383,7 +349,8 @@ function applySettings(settings) {
     elements.targetHr.value = settings.h || '4';
     elements.targetMin.value = settings.m || '0';
     elements.startTime.value = settings.start || '06:00';
-    elements.pacingStrategy.value = pacingStrategies[settings.strategy] ? settings.strategy : 'even';
+    if (settings.race && RACES[settings.race]) raceConfig = RACES[settings.race];
+    elements.pacingStrategy.value = strategyDescriptions[settings.strategy] ? settings.strategy : 'even';
     if (['40', '60', '90'].includes(settings.carbs)) elements.carbTarget.value = settings.carbs;
     if (['10', '15', '20'].includes(settings.drink)) elements.drinkInterval.value = settings.drink;
     elements.sodiumReminders.checked = settings.sodium === '1';
@@ -392,10 +359,11 @@ function applySettings(settings) {
 
 function loadInitialSettings() {
     const params = new URLSearchParams(window.location.search);
-    const hasQuerySettings = ['h', 'm', 'start', 'strategy'].some((key) => params.has(key));
+    const hasQuerySettings = ['race', 'h', 'm', 'start', 'strategy'].some((key) => params.has(key));
 
     if (hasQuerySettings) {
         applySettings({
+            race: params.get('race'),
             h: params.get('h'),
             m: params.get('m'),
             start: params.get('start'),
@@ -446,6 +414,7 @@ function bindEvents() {
         debouncedUpdate();
     });
     elements.pacingStrategy.addEventListener('change', updatePlan);
+    elements.raceSelect.addEventListener('change', () => setRace(elements.raceSelect.value));
 
     [elements.carbTarget, elements.drinkInterval].forEach((input) => {
         input.addEventListener('change', () => {
@@ -490,7 +459,7 @@ window.getPlanData = function getPlanData() {
         summary: {
             targetTime: formatDuration(lastInput.targetTimeInHours),
             targetShort: `${lastInput.hours}:${String(lastInput.minutes).padStart(2, '0')}`,
-            avgSpeed: (totalRaceDistance / lastInput.targetTimeInHours).toFixed(1),
+            avgSpeed: (raceConfig.distanceKm / lastInput.targetTimeInHours).toFixed(1),
             startClock: `${String(lastInput.startHour).padStart(2, '0')}:${String(lastInput.startMinute).padStart(2, '0')}`,
             finishClock: finish.timeOfDay,
             strategyLabel: strategySelect.options[strategySelect.selectedIndex].text
@@ -508,9 +477,36 @@ window.getPlanData = function getPlanData() {
     };
 };
 
+function populateRacePicker() {
+    elements.raceSelect.replaceChildren(...Object.values(RACES).map((race) => {
+        const option = document.createElement('option');
+        option.value = race.id;
+        option.textContent = `${race.name} · ${race.distanceKm.toFixed(0)} km`;
+        return option;
+    }));
+}
+
+function applyRaceToUI() {
+    elements.raceTitle.textContent = raceConfig.name;
+    elements.raceTagline.textContent = raceConfig.heroCopy || '';
+    elements.raceNotice.textContent = raceConfig.notice || '';
+    elements.raceNotice.hidden = !raceConfig.notice;
+    elements.raceSelect.value = raceConfig.id;
+    document.title = `${raceConfig.name} Pacing Calculator`;
+}
+
+function setRace(id) {
+    if (!RACES[id] || RACES[id] === raceConfig) return;
+    raceConfig = RACES[id];
+    applyRaceToUI();
+    updatePlan();
+}
+
 function init() {
     applyTheme(localStorage.getItem('amashovaTheme') || 'dark');
+    populateRacePicker();
     loadInitialSettings();
+    applyRaceToUI();
     bindEvents();
     updatePlan();
     if (window.PrintKit) window.PrintKit.init();

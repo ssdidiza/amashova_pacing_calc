@@ -106,6 +106,16 @@
     border-radius: 1mm;
 }
 .stem-notes { margin-top: 1mm; }
+
+/* Dense mode for races with more than ~7 checkpoints */
+.stem-card.is-dense .stem-row { gap: 1.5mm; font-size: 7.2pt; line-height: 1.05; }
+.stem-card.is-dense .stem-km { width: 6.5mm; }
+.stem-card.is-dense .stem-name { font-size: 6.5pt; }
+.stem-card.is-dense .stem-eta { font-size: 8.5pt; }
+.stem-card.is-dense .stem-target { font-size: 13pt; }
+.stem-card.is-dense .stem-sub { margin-top: 0.5mm; font-size: 6pt; }
+.stem-card.is-dense .stem-fuel { font-size: 6.5pt; padding: 1mm 2mm; }
+.stem-card.is-dense .stem-note { font-size: 6.5pt; }
 .stem-note {
     font-size: 7pt;
     font-weight: 700;
@@ -278,6 +288,7 @@
 .plan-table tbody tr:last-child td { font-weight: 800; }
 .fuel-table { column-gap: 4mm; }
 .fuel-table td { font-size: 8pt; padding: 1.1mm 2mm; }
+.fuel-table.is-long td { font-size: 7.2pt; padding: 0.7mm 2mm; }
 .fuel-sodium td { color: #000; font-weight: 700; }
 .plan-lead { margin: 0 0 2mm; font-size: 9pt; }
 .elev-svg { width: 100%; height: auto; margin-top: 1mm; }

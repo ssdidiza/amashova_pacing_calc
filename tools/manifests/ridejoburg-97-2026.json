@@ -1,0 +1,33 @@
+{
+    "id": "ridejoburg-97-2026",
+    "gpx": "routes/RJ26_Route96km.gpx",
+    "elevationCache": "tools/cache-rj26-elevation.json",
+    "output": "races/ridejoburg-97-2026.js",
+    "officialDistanceKm": 97.0,
+    "name": "Ride Joburg 97",
+    "shortName": "RIDE JOBURG 97",
+    "edition": "November 2026",
+    "startLocation": "Kyalami",
+    "finishLocation": "Kyalami",
+    "heroCopy": "Build a clear 97 km pacing plan for the all-new Ride Joburg route with checkpoint arrival times and segment speed guidance.",
+    "notice": "New for 2026 — an all-new route with a new start and finish at Kyalami. Old splits don't apply. Build a fresh plan.",
+    "elevationNote": "Profile derived from route GPS data — confirm against official race information before race day.",
+    "checkpoints": [
+        { "name": "WP1 Fourways", "shortName": "Fourways", "km": 9.25, "note": "Fast start off Kyalami with an early descent. Ride calm, don't chase wheels." },
+        { "name": "WP2 Randburg", "shortName": "Randburg", "km": 19, "note": "The Douglasdale drag starts around km 11 — long and steady. Find your rhythm." },
+        { "name": "WP3 Zoo Lake", "shortName": "Zoo Lake", "km": 30.2, "note": "Jan Smuts rises through Bordeaux and Parkwood. Eat before the KOM." },
+        { "name": "WP4 City South", "shortName": "City South", "km": 40, "note": "Over the Westcliff KOM, through town and across Nelson Mandela Bridge. Recover on the high ground." },
+        { "name": "WP5 Soccer City", "shortName": "Soccer City", "km": 59, "note": "Halfway at 48.5 km. Rolling, exposed roads out west — share the work if there's wind." },
+        { "name": "WP6 Parktown", "shortName": "Parktown", "km": 68, "note": "The Nasrec rises drag you back up to the Parktown ridge. Steady effort, no surges." },
+        { "name": "WP7 Sandton", "shortName": "Sandton", "km": 76, "note": "Over the top and descending through Sandton. Free speed in a group — stay alert." },
+        { "name": "WP8 Woodmead", "shortName": "Woodmead", "km": 84.5, "note": "Rolling descent continues. Eat now — the last climb is coming." },
+        { "name": "Finish Kyalami", "shortName": "Finish", "km": 97, "note": "The Woodmead sting bites around km 90 (~4 km at 2%). Crest it, then empty the tank to Kyalami." }
+    ],
+    "climbs": [
+        { "name": "Douglasdale drag", "km": 12 },
+        { "name": "Jan Smuts steps", "km": 24 },
+        { "name": "KOM · Westcliff", "km": 31 },
+        { "name": "Nasrec rises", "km": 58 },
+        { "name": "Woodmead sting", "km": 91 }
+    ]
+}

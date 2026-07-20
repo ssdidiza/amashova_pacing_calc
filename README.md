@@ -1,6 +1,11 @@
-# Amashova Split Calculator
+# Race Pace Calculator
 
 ## Description
+
+A web-based tool that helps cyclists plan their race strategy. It started as the Amashova Split Calculator and now supports multiple races through a race picker:
+
+*   **Amashova Durban Classic** — 106 km, Pietermaritzburg → Durban
+*   **Ride Joburg 97 (2026)** — 97 km, the all-new Kyalami route
 
 The Amashova Split Calculator is a web-based tool designed to help cyclists plan their race strategy for the Amashova Durban Classic or similar cycling events. Users can input their target finish time, start time, and preferred pacing strategy, and the calculator will generate detailed split times for various segments of the race. It also visualizes the pacing strategy on a bar chart and allows exporting the split data to a CSV file.
 
@@ -55,4 +60,14 @@ The calculator uses predefined segments based on the Amashova race route, with s
 
 ## Race Configuration
 
-All route data (name, distance, checkpoints, climbs, indicative elevation profile) lives in the `raceConfig` object at the top of `script.js`. The calculation engine and every print template read only from this object, so the tool can be pointed at a different race by swapping the config — for example one generated from a GPX file — without touching the templates in `print.js` / `print.css`.
+Each race lives in its own file under `races/`, registered on `window.RACES`. The calculation engine and every print template read only from the active config (name, distance, checkpoints, climbs, elevation profile, pacing-factor strategies), so adding a race never touches the templates.
+
+### Adding a race from a GPX file
+
+1. Drop the GPX in `routes/`.
+2. Create a manifest in `tools/manifests/<race>.json` with the race metadata and official checkpoint distances (see `ridejoburg-97-2026.json` for the format).
+3. Run `node tools/gpx-to-config.js tools/manifests/<race>.json`.
+
+The generator computes distances, fetches and smooths elevation (open-elevation.com, with a local cache), derives per-segment pacing factors from gradient, builds conservative/aggressive variants, and writes the race file into `races/`. Add a `<script>` tag for it in `index.html` and it appears in the race picker.
+
+Share links carry the race (`?race=<id>`), and `?print=stem|tube|full|all` deep-links to a staged print for any race.
