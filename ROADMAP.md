@@ -48,6 +48,14 @@ plan back after the race and compare.
   need a slug in the script's `SLUGS` map; it warns and falls back to the
   id otherwise).
 
+### v2.3 — Per-race saved settings (2026-07-20)
+- Target time, start time, pacing strategy, fuel settings and rider notes are
+  now saved independently by race, so switching races restores the correct
+  plan instead of silently carrying inputs across.
+- Existing `amashovaPacingSettingsV2` data is migrated once to the race it
+  was last used with. Race-only landing links restore that race's plan;
+  full share links continue to override settings from their URL parameters.
+
 ## Next (ordered)
 
 1. **Start-pen / seeding-batch presets** — per-race optional
@@ -87,8 +95,6 @@ plan back after the race and compare.
 
 ## Known caveats
 
-- Settings (target time, notes) are one shared localStorage object, not
-  per-race — switching races keeps the same target time.
 - Fuel table can crowd page 2 of the full plan for very long rides (8 h at
   90 g/h); `is-long` compact mode mitigates but doesn't paginate.
 - `?print=` param is captured at script parse time because the app rewrites

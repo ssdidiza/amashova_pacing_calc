@@ -47,7 +47,19 @@ const strategyDescriptions = {
     aggressive: 'Front-loads effort. Higher risk and better suited to experienced riders.'
 };
 
-const STORAGE_KEY = 'amashovaPacingSettingsV2';
+const STORAGE_KEY = 'racePacingSettingsV3';
+const LEGACY_STORAGE_KEY = 'amashovaPacingSettingsV2';
+const DEFAULT_SETTINGS = Object.freeze({
+    h: '4',
+    m: '0',
+    start: '06:00',
+    strategy: 'even',
+    carbs: '60',
+    drink: '15',
+    sodium: '',
+    notes: ''
+});
+let settingsStore = null;
 let lastInput = null;
 
 function clamp(value, min, max) {
@@ -329,9 +341,55 @@ function showStatus(message) {
     }, 3000);
 }
 
+function persistSettingsStore() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(settingsStore));
+}
+
+function loadSettingsStore() {
+    if (settingsStore) return settingsStore;
+
+    try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (saved && saved.races && typeof saved.races === 'object') {
+            settingsStore = {
+                lastRace: RACES[saved.lastRace] ? saved.lastRace : '',
+                races: saved.races
+            };
+            return settingsStore;
+        }
+    } catch (error) {
+        localStorage.removeItem(STORAGE_KEY);
+    }
+
+    settingsStore = { lastRace: '', races: {} };
+
+    let legacySettings = null;
+    try {
+        legacySettings = JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY));
+    } catch (error) {
+        localStorage.removeItem(LEGACY_STORAGE_KEY);
+    }
+
+    if (legacySettings && typeof legacySettings === 'object') {
+        const legacyRace = RACES[legacySettings.race]
+            ? legacySettings.race
+            : raceConfig.id;
+        settingsStore.lastRace = legacyRace;
+        settingsStore.races[legacyRace] = legacySettings;
+        try {
+            persistSettingsStore();
+            localStorage.removeItem(LEGACY_STORAGE_KEY);
+        } catch (error) {
+            // Keep the legacy value so migration can be retried next time.
+        }
+    }
+
+    return settingsStore;
+}
+
 function saveSettings() {
+    const store = loadSettingsStore();
     const settings = {
-        race: raceConfig.id,
         h: elements.targetHr.value,
         m: elements.targetMin.value,
         start: elements.startTime.value,
@@ -341,29 +399,37 @@ function saveSettings() {
         sodium: elements.sodiumReminders.checked ? '1' : '',
         notes: elements.riderNotes.value
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    store.lastRace = raceConfig.id;
+    store.races[raceConfig.id] = settings;
+    persistSettingsStore();
 }
 
 function applySettings(settings) {
-    if (!settings) return;
-    elements.targetHr.value = settings.h || '4';
-    elements.targetMin.value = settings.m || '0';
-    elements.startTime.value = settings.start || '06:00';
-    if (settings.race && RACES[settings.race]) raceConfig = RACES[settings.race];
-    elements.pacingStrategy.value = strategyDescriptions[settings.strategy] ? settings.strategy : 'even';
-    if (['40', '60', '90'].includes(settings.carbs)) elements.carbTarget.value = settings.carbs;
-    if (['10', '15', '20'].includes(settings.drink)) elements.drinkInterval.value = settings.drink;
-    elements.sodiumReminders.checked = settings.sodium === '1';
-    if (typeof settings.notes === 'string') elements.riderNotes.value = settings.notes.slice(0, 280);
+    const values = { ...DEFAULT_SETTINGS, ...(settings || {}) };
+    elements.targetHr.value = values.h || DEFAULT_SETTINGS.h;
+    elements.targetMin.value = values.m || DEFAULT_SETTINGS.m;
+    elements.startTime.value = values.start || DEFAULT_SETTINGS.start;
+    elements.pacingStrategy.value = strategyDescriptions[values.strategy] ? values.strategy : DEFAULT_SETTINGS.strategy;
+    elements.carbTarget.value = ['40', '60', '90'].includes(values.carbs) ? values.carbs : DEFAULT_SETTINGS.carbs;
+    elements.drinkInterval.value = ['10', '15', '20'].includes(values.drink) ? values.drink : DEFAULT_SETTINGS.drink;
+    elements.sodiumReminders.checked = values.sodium === '1';
+    elements.riderNotes.value = typeof values.notes === 'string' ? values.notes.slice(0, 280) : '';
 }
 
 function loadInitialSettings() {
     const params = new URLSearchParams(window.location.search);
-    const hasQuerySettings = ['race', 'h', 'm', 'start', 'strategy'].some((key) => params.has(key));
+    const store = loadSettingsStore();
+    const queryRace = params.get('race');
+    const selectedRace = RACES[queryRace]
+        ? queryRace
+        : (RACES[store.lastRace] ? store.lastRace : raceConfig.id);
+    const hasQuerySettings = ['h', 'm', 'start', 'strategy', 'carbs', 'drink', 'sodium', 'notes']
+        .some((key) => params.has(key));
+
+    raceConfig = RACES[selectedRace];
 
     if (hasQuerySettings) {
         applySettings({
-            race: params.get('race'),
             h: params.get('h'),
             m: params.get('m'),
             start: params.get('start'),
@@ -374,11 +440,7 @@ function loadInitialSettings() {
             notes: params.get('notes') || ''
         });
     } else {
-        try {
-            applySettings(JSON.parse(localStorage.getItem(STORAGE_KEY)));
-        } catch (error) {
-            localStorage.removeItem(STORAGE_KEY);
-        }
+        applySettings(store.races[raceConfig.id]);
     }
 
     syncSliderFromTime();
@@ -497,7 +559,10 @@ function applyRaceToUI() {
 
 function setRace(id) {
     if (!RACES[id] || RACES[id] === raceConfig) return;
+    saveSettings();
     raceConfig = RACES[id];
+    applySettings(loadSettingsStore().races[id]);
+    syncSliderFromTime();
     applyRaceToUI();
     updatePlan();
 }
