@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://ssdidiza.github.io/amashova_pacing_calc/sitemap.xml
